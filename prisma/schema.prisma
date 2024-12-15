@@ -1,0 +1,60 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  projects  Project[]
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  name      String
+  userId    String
+  nodes     Node[]
+  edges     Edge[]
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Node {
+  id        String   @id @default(cuid())
+  type      String
+  title     String
+  content   String   @db.Text
+  order     Int
+  metadata  Json
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+  chats     Chat[]
+  sourceEdges Edge[] @relation("source")
+  targetEdges Edge[] @relation("target")
+}
+
+model Edge {
+  id          String @id @default(cuid())
+  sourceId    String
+  targetId    String
+  relationship String
+  source      Node   @relation("source", fields: [sourceId], references: [id])
+  target      Node   @relation("target", fields: [targetId], references: [id])
+  projectId   String
+  project     Project @relation(fields: [projectId], references: [id])
+}
+
+model Chat {
+  id        String   @id @default(cuid())
+  nodeId    String
+  persona   String
+  messages  Json
+  node      Node     @relation(fields: [nodeId], references: [id])
+}

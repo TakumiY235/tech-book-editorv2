@@ -1,0 +1,70 @@
+architecture:
+  frontend:
+    presentation:
+      - pages:
+          - projects/
+          - editor/
+          - settings/
+      - components:
+          - editor:
+              - content-editor
+              - tree-editor
+          - chat:
+              - editor-chat
+              - writer-chat
+          - ui:
+              - common-components
+    application:
+      - hooks:
+          - useProject
+          - useNode
+          - useAIChat
+      - stores:
+          - projectStore
+          - editorStore
+          - chatStore
+    domain:
+      - types:
+          - project
+          - node
+          - chat
+      - services:
+          - projectService
+          - nodeService
+          - chatService
+
+  backend:
+    application:
+      - api:
+          - projects
+          - nodes
+          - chat
+      - services:
+        - ai:
+            - editorService
+            - writerService
+        - project:
+            - nodeManagement
+            - treeManagement
+    domain:
+      - entities:
+          - Project
+          - Node
+          - Edge
+          - Chat
+      - repositories:
+          - projectRepository
+          - nodeRepository
+          - chatRepository
+    infrastructure:
+      - database:
+          - postgresql
+          - prisma
+      - external:
+          - openai
+          - anthropic
+
+  shared:
+    - types
+    - constants
+    - utils

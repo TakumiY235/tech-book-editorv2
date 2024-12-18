@@ -1,12 +1,15 @@
-import { prisma } from '@/lib/prisma/db';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { prisma } from '@/lib/prisma/db'
+import { Button } from '@/components/ui/button'
+import { ProjectCard } from '@/components/projects/project-card'
 import Link from 'next/link';
 
 export default async function ProjectsPage() {
   const projects = await prisma.project.findMany({
     include: {
       user: true,
+    },
+    orderBy: {
+      name: 'asc',
     },
   });
 
@@ -21,18 +24,12 @@ export default async function ProjectsPage() {
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {projects.map((project) => (
-          <Link href={`/projects/${project.id}`} key={project.id}>
-            <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-              <CardHeader>
-                <CardTitle>{project.name}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-600">
-                  Created by {project.user.name || 'Unknown'}
-                </p>
-              </CardContent>
-            </Card>
-          </Link>
+          <ProjectCard
+            key={project.id}
+            id={project.id}
+            name={project.name}
+            userName={project.user?.name || 'Unknown'}
+          />
         ))}
       </div>
     </div>

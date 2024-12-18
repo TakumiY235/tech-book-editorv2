@@ -11,8 +11,8 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
+  id        String    @id @default(cuid())
+  email     String    @unique
   name      String?
   projects  Project[]
 }
@@ -21,40 +21,56 @@ model Project {
   id        String   @id @default(cuid())
   name      String
   userId    String
-  nodes     Node[]
-  edges     Edge[]
   user      User     @relation(fields: [userId], references: [id])
+  nodes     Node[]
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum NodeType {
+  section
+  subsection
+}
+
+enum NodeStatus {
+  draft
+  in_progress
+  review
+  completed
 }
 
 model Node {
-  id        String   @id @default(cuid())
-  type      String
-  title     String
-  content   String   @db.Text
-  order     Int
-  metadata  Json
-  projectId String
-  project   Project  @relation(fields: [projectId], references: [id])
-  chats     Chat[]
-  sourceEdges Edge[] @relation("source")
-  targetEdges Edge[] @relation("target")
-}
+  // Basic information
+  id          String     @id @default(cuid())
+  type        NodeType
+  title       String
+  description String?    @db.Text
+  purpose     String?    @db.Text
+  content     String?    @db.Text
+  status      NodeStatus @default(draft)
+  order       Int
 
-model Edge {
-  id          String @id @default(cuid())
-  sourceId    String
-  targetId    String
-  relationship String
-  source      Node   @relation("source", fields: [sourceId], references: [id])
-  target      Node   @relation("target", fields: [targetId], references: [id])
+  // Book specific fields
+  n_pages     Float      @default(0)
+  should_split Boolean   @default(false)
+
+  // Relationships
   projectId   String
-  project     Project @relation(fields: [projectId], references: [id])
-}
+  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parentId    String?
+  parent      Node?      @relation("NodeToNode", fields: [parentId], references: [id])
+  children    Node[]     @relation("NodeToNode")
 
-model Chat {
-  id        String   @id @default(cuid())
-  nodeId    String
-  persona   String
-  messages  Json
-  node      Node     @relation(fields: [nodeId], references: [id])
+  // Metadata
+  metadata    Json       @default("{}")
+
+  // Audit information
+  createdBy    String?
+  lastEditedBy String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([parentId])
 }

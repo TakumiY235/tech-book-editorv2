@@ -10,6 +10,8 @@ const nextConfig = {
     }
     return config;
   },
+  // Packages that need transpilation
+  transpilePackages: ['katex', 'prismjs'],
 };
 
 module.exports = nextConfig;

@@ -1,0 +1,74 @@
+# プロジェクトとノードの構造定義
+
+Project:
+  id: string # @id @default(cuid())
+  name: string
+  createdAt: datetime
+  updatedAt: datetime
+  nodes: Node[] # 1:N relationship
+
+Node:
+  # 基本情報
+  id: string # @id @default(cuid())
+  type: enum # section | subsection
+  title: string
+  description: string? # nullable
+  purpose: string? # nullable
+  keywords: string[] # array
+  content: string? # nullable
+  status: enum # draft | in_progress | review | completed
+  order: number # 同じ階層内での順序
+
+  # 関係性
+  projectId: string # Project への外部キー
+  parentId: string? # 自己参照による木構造（nullの場合はルートノード）
+
+  # AI支援用メタデータ
+  aiImprovement: string? # nullable
+  aiReferences: string[] # array
+  aiRelatedTopics: string[] # array
+
+  # 構造化メタデータ
+  n_pages: float? # nullable, 0.1単位でページ数を指定
+  should_split: boolean? # nullable, サブセクションへの分割要否を示すフラグ
+
+  # 監査情報
+  createdBy: string? # nullable
+  lastEditedBy: string? # nullable
+  createdAt: datetime
+  updatedAt: datetime
+
+# ドメインルール
+rules:
+  node:
+    # 階層構造
+    - セクションは任意の深さに配置可能
+    - サブセクションはセクションの下にのみ配置可能
+    - 親子関係はparentIdで表現され、nullの場合はルートノード
+    
+    # ステータス遷移
+    status_transitions:
+      draft: [in_progress]
+      in_progress: [review, draft]
+      review: [completed, in_progress]
+      completed: [in_progress]
+    
+    # 削除条件
+    deletion:
+      - 子ノードを持たないノード（他のノードからparentIdとして参照されていないノード）のみ削除可能
+
+    # 完了条件
+    completion_requirements:
+      - タイトルが空でないこと
+      - コンテンツが空でないこと
+      - ステータスがreviewであること
+
+    # 構造化メタデータのルール
+    structured_metadata:
+      n_pages:
+        - 0.1単位で指定可能（例: 1.5は1.5ページを意味する）
+        - nullの場合は未定義を示す
+      should_split:
+        - trueの場合、内容の意味的凝集性からサブセクションへの分割が推奨される
+        - falseの場合、現状の構造を維持することが推奨される
+        - nullの場合は未評価を示す

@@ -16,6 +16,13 @@ export function EditorToolbar({
   bookTitle,
   targetAudience
 }: EditorToolbarProps) {
+  console.log('EditorToolbar: Rendering with props:', {
+    isGenerating,
+    hasOnGenerateContent: !!onGenerateContent,
+    bookTitle,
+    targetAudience
+  });
+
   return (
     <div className="flex items-center justify-between">
       <div className="flex space-x-2">
@@ -97,13 +104,6 @@ export function EditorToolbar({
         >
           1. List
         </Button>
-        <Button
-          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
-          className={editor.isActive('codeBlock') ? 'bg-gray-200' : ''}
-          size="sm"
-        >
-          Code Block
-        </Button>
         <div className="border-l mx-2 h-6" />
         <Button
           onClick={() => {
@@ -150,34 +150,50 @@ export function EditorToolbar({
         >
           Code
         </Button>
-        {onGenerateContent && bookTitle && targetAudience && (
-          <div className="flex items-center ml-4">
-            <Button
-              onClick={onGenerateContent}
-              disabled={isGenerating}
-              size="sm"
-              className="flex items-center gap-2"
-              variant={isGenerating ? "outline" : "default"}
-            >
-              {isGenerating ? (
-                <>
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                  </svg>
-                  <span>生成中...</span>
-                </>
-              ) : (
-                <>
-                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                  <span>AIで生成</span>
-                </>
-              )}
-            </Button>
-          </div>
-        )}
+        {(() => {
+          const canShowAIButton = onGenerateContent && bookTitle && targetAudience;
+          console.log('EditorToolbar: AI button conditions:', {
+            hasOnGenerateContent: !!onGenerateContent,
+            hasBookTitle: !!bookTitle,
+            hasTargetAudience: !!targetAudience,
+            canShowAIButton
+          });
+          
+          if (canShowAIButton) {
+            return (
+              <div className="flex items-center ml-4">
+                <Button
+                  onClick={() => {
+                    console.log('EditorToolbar: AI生成ボタンがクリックされました');
+                    onGenerateContent();
+                  }}
+                  disabled={isGenerating}
+                  size="sm"
+                  className="flex items-center gap-2"
+                  variant={isGenerating ? "outline" : "default"}
+                >
+                  {isGenerating ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      <span>生成中...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      <span>AIで生成</span>
+                    </>
+                  )}
+                </Button>
+              </div>
+            );
+          }
+          return null;
+        })()}
       </div>
     </div>
   );

@@ -3,7 +3,7 @@
 import React from 'react';
 import { DragDropContext, Droppable, DropResult } from 'react-beautiful-dnd';
 import { NodeItem } from './node-item';
-import { Node, OrganizedNode } from '@/hooks/useProjectEditor';
+import { BookNode, OrganizedNode } from '@/hooks/types';
 
 interface NodeListItemProps {
   node: OrganizedNode;
@@ -14,6 +14,7 @@ interface NodeListItemProps {
   onDelete: (nodeId: string, e: React.MouseEvent) => void;
   onUpdateTitle: (nodeId: string, newTitle: string) => void;
   onCreateSubsection: (parentId: string) => void;
+  onGenerateSubsections?: (nodeId: string) => void;
 }
 
 function NodeListItem({
@@ -25,6 +26,7 @@ function NodeListItem({
   onDelete,
   onUpdateTitle,
   onCreateSubsection,
+  onGenerateSubsections,
 }: NodeListItemProps) {
   return (
     <li className="space-y-2">
@@ -37,9 +39,10 @@ function NodeListItem({
         onDelete={onDelete}
         onUpdateTitle={onUpdateTitle}
         onCreateSubsection={onCreateSubsection}
+        onGenerateSubsections={onGenerateSubsections}
       />
       {node.children.length > 0 && (
-        <Droppable droppableId={node.id}>
+        <Droppable droppableId={node.id} isDropDisabled={false} isCombineEnabled={false} ignoreContainerClipping={false}>
           {(provided) => (
             <ul
               className="ml-4 space-y-2 border-l border-gray-200"
@@ -57,6 +60,7 @@ function NodeListItem({
                   onDelete={onDelete}
                   onUpdateTitle={onUpdateTitle}
                   onCreateSubsection={onCreateSubsection}
+                  onGenerateSubsections={onGenerateSubsections}
                 />
               ))}
               {provided.placeholder}
@@ -76,6 +80,7 @@ interface NodeListProps {
   onDelete: (nodeId: string, e: React.MouseEvent) => void;
   onUpdateTitle: (nodeId: string, newTitle: string) => void;
   onCreateSubsection: (parentId: string) => void;
+  onGenerateSubsections?: (nodeId: string) => void;
 }
 
 export function NodeList({
@@ -86,14 +91,15 @@ export function NodeList({
   onDelete,
   onUpdateTitle,
   onCreateSubsection,
+  onGenerateSubsections,
 }: NodeListProps) {
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      <div className="mt-6 overflow-y-auto">
+      <div className="mt-6 overflow-y-auto flex-1">
         {organizedNodes.length === 0 ? (
           <p className="text-gray-500">No content yet. Create your first section above.</p>
         ) : (
-          <Droppable droppableId="root">
+          <Droppable droppableId="root" isDropDisabled={false} isCombineEnabled={false} ignoreContainerClipping={false}>
             {(provided) => (
               <ul
                 className="space-y-2"
@@ -110,6 +116,7 @@ export function NodeList({
                     onDelete={onDelete}
                     onUpdateTitle={onUpdateTitle}
                     onCreateSubsection={onCreateSubsection}
+                    onGenerateSubsections={onGenerateSubsections}
                   />
                 ))}
                 {provided.placeholder}

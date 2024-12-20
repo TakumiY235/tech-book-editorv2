@@ -10,9 +10,10 @@ interface ReorderRequest {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
+    const params = context.params;
     const { nodeId, newOrder, newParentId } = (await request.json()) as ReorderRequest;
 
     // Get the node to be moved

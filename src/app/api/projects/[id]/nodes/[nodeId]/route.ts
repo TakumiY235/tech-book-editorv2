@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma/db';
-
-type NodeType = 'section' | 'subsection';
-type NodeStatus = 'draft' | 'in_progress' | 'review' | 'completed';
+import { BookNode } from '@/hooks/types';
+import { Node as PrismaNode, NodeStatus, NodeType } from '@prisma/client';
 
 type ValidUpdateFields = {
   title?: string;
@@ -14,11 +13,29 @@ type ValidUpdateFields = {
   keywords?: string[];
 };
 
-export async function PATCH(
+// Transform database node to match expected BookNode type
+function transformNode(dbNode: PrismaNode): BookNode {
+  return {
+    id: dbNode.id,
+    title: dbNode.title,
+    content: dbNode.content || '',
+    description: dbNode.description || '',
+    purpose: dbNode.purpose || '',
+    type: dbNode.type,
+    status: dbNode.status,
+    order: dbNode.order,
+    parentId: dbNode.parentId,
+    n_pages: dbNode.n_pages,
+    should_split: dbNode.should_split,
+  };
+}
+
+export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string; nodeId: string } }
+  context: { params: { id: string; nodeId: string } }
 ) {
   try {
+    const { id, nodeId } = await context.params;
     const updates = await request.json();
     const allowedUpdates = ['title', 'content', 'type', 'status', 'description', 'purpose', 'keywords'] as const;
     
@@ -41,13 +58,13 @@ export async function PATCH(
 
     const node = await prisma.node.update({
       where: {
-        id: params.nodeId,
-        projectId: params.id,
+        id: nodeId,
+        projectId: id,
       },
       data: validUpdates,
     });
 
-    return NextResponse.json(node);
+    return NextResponse.json(transformNode(node));
   } catch (error) {
     console.error('Error updating node:', error);
     return NextResponse.json(
@@ -67,8 +84,7 @@ async function deleteNodeAndChildren(projectId: string, nodeId: string) {
   });
 
   // Filter to find child nodes
-  const childNodes = nodes.filter(n => {
-    const node = n as any;
+  const childNodes = nodes.filter((node) => {
     return node.parentId === nodeId;
   });
 
@@ -88,10 +104,11 @@ async function deleteNodeAndChildren(projectId: string, nodeId: string) {
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string; nodeId: string } }
+  context: { params: { id: string; nodeId: string } }
 ) {
   try {
-    await deleteNodeAndChildren(params.id, params.nodeId);
+    const { id, nodeId } = await context.params;
+    await deleteNodeAndChildren(id, nodeId);
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error('Error deleting node:', error);

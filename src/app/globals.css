@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import KaTeX styles for math rendering */
+@import 'katex/dist/katex.min.css';
+
+/* Import our custom Markdown styles */
+@import '../styles/markdown.css';
+
 @layer base {
   :root {
     --background: 0 0% 100%;

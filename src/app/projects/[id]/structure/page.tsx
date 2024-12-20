@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
-import { useProjectEditor, BookMetadata } from '@/hooks/useProjectEditor';
+import { useProjectEditor } from '@/hooks/useProjectEditor';
+import { BookMetadata } from '@/hooks/types';
 import BookMetadataForm from '@/components/projects/book-metadata-form';
 import { NodeList } from '@/components/projects/node-list';
 import { Alert, AlertDescription } from '@/components/ui/alert';

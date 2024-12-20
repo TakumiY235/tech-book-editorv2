@@ -4,10 +4,32 @@ export const generateSectionContentPrompt = (
   node: {
     title: string;
     description: string;
-    purpose: string;
+    purpose?: string;
     n_pages: number;
-  }
-) => `あなたは技術書の執筆を支援する専門家AIです。以下の情報に基づいて、セクションの内容を生成してください。
+  },
+  previousNode: {
+    title: string;
+    description: string;
+    content?: string;
+  } | null,
+  nextNode: {
+    title: string;
+    description: string;
+    content?: string;
+  } | null
+) => `
+<Inputs>
+${bookTitle} - 本のタイトル
+${targetAudience} - 対象読者
+${node.title} - セクションのタイトル
+${node.description} - セクションの説明
+${node.purpose || '目的なし'} - セクションの目的
+${node.n_pages} - 想定ページ数
+${previousNode} - 前のセクション情報
+${nextNode} - 次のセクション情報
+</Inputs>
+<Instructions>
+あなたは該当分野で10年以上の研究実績と執筆経験を持つ専門家としてのAIアシスタントです。以下の情報に基づいて、セクションの本文を生成してください。
 
 本のタイトル: ${bookTitle}
 対象読者: ${targetAudience}
@@ -15,13 +37,40 @@ export const generateSectionContentPrompt = (
 セクション情報:
 タイトル: ${node.title}
 説明: ${node.description}
-目的: ${node.purpose}
+目的: ${node.purpose || '目的なし'}
 想定ページ数: ${node.n_pages}ページ
+
+コンテキスト情報:
+前のセクション:
+${previousNode ? `- タイトル: ${previousNode.title}
+- 説明: ${previousNode.description}` : '- なし'}
+
+次のセクション:
+${nextNode ? `- タイトル: ${nextNode.title}
+- 説明: ${nextNode.description}` : '- なし'}
+
+執筆ガイドライン：
+
+構成要件:
+
+明確な導入部で読者の興味を引く
+論理的な流れで内容を展開
+適切な例示で理解を促進
+重要なポイントのまとめを含める
+次のセクションへの自然な橋渡し
+
+
+内容の深さ：
+
+${targetAudience}の知識レベルに合わせた説明
+基本概念から応用へと段階的に展開
+具体例を効果的に活用
+実践的な応用例の提示
 
 要件:
 1. 対象読者のレベルに合わせた適切な説明と例を含めてください
-2. 技術的な正確性を保ちながら、わかりやすい説明を心がけてください
-3. 以下の環境を適切に使用してコンテンツを生成してください：
+2. 正確性を保ちながら、わかりやすい説明を心がけてください
+3. 数式やコードを内容に含める場合は、以下の環境を適切に使用してコンテンツを生成してください：
 
    a) コードサンプルの場合:
    \\begin{lstlisting}[language=使用言語]
@@ -64,6 +113,7 @@ export const generateSectionContentPrompt = (
    - プログラミング言語の文法説明 → lstlisting環境
 
 5. 想定ページ数に合わせて、適切な量の内容を生成してください
+6. 数式やコードは必ずしも内容に含める必要はありません。解説に適した場合のみ用いてください。
 
 出力形式:
 LaTeXフォーマットで出力してください。以下の環境を適切に使用してください：
@@ -72,4 +122,24 @@ LaTeXフォーマットで出力してください。以下の環境を適切に
 - 複数行の数式: \\begin{align} ... \\end{align}
 - 見出しは適切なレベル（\\section, \\subsection）を使用してください
 
-セクションの内容を生成してください。`;
+品質チェック項目：
+<quality_check>
+□ ${node.purpose ? `${node.purpose}の全ての学習目標をカバー` : '基本的な学習目標をカバー'}
+□ 対象読者レベルとの整合性
+□ 前後のセクションとの整合性
+□ テクニカルコンテンツの正確性
+□ LaTeX記法の正確性
+□ ページ量の適切性
+□ 説明の具体性と分かりやすさ
+</quality_check>
+<thinking>タグ内で以下を確認してください：
+
+内容は学習目標を達成できるか
+説明の順序は論理的か
+例示は適切か
+テクニカル要素は正確か
+前後のセクションとの関係性は明確か
+
+LaTeXフォーマットで本文のみを生成してください。
+</Instructions>
+`;

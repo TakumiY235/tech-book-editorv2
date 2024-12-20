@@ -3,10 +3,10 @@
 import React from 'react';
 import { Draggable } from 'react-beautiful-dnd';
 import { Button } from '../ui/button';
-import { Node } from '@/hooks/useProjectEditor';
+import { BookNode } from '@/hooks/types';
 
 interface NodeItemProps {
-  node: Node;
+  node: BookNode;
   index: number;
   parentIndex?: string;
   selectedNodeId: string | null;
@@ -14,6 +14,7 @@ interface NodeItemProps {
   onDelete: (nodeId: string, e: React.MouseEvent) => void;
   onUpdateTitle: (nodeId: string, newTitle: string) => void;
   onCreateSubsection: (parentId: string) => void;
+  onGenerateSubsections?: (nodeId: string) => void;
 }
 
 export function NodeItem({
@@ -25,6 +26,7 @@ export function NodeItem({
   onDelete,
   onUpdateTitle,
   onCreateSubsection,
+  onGenerateSubsections,
 }: NodeItemProps) {
   return (
     <Draggable draggableId={node.id} index={index}>
@@ -53,22 +55,41 @@ export function NodeItem({
                     value={node.title}
                     onChange={(e) => onUpdateTitle(node.id, e.target.value)}
                   />
-                  <span className="text-xs text-gray-500 px-2 py-1 bg-gray-200 rounded ml-2">
-                    {node.status}
-                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   {(node.type === 'section' || node.type === 'subsection') && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onCreateSubsection(node.id);
-                      }}
-                    >
-                      Add sub
-                    </Button>
+                    <>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onCreateSubsection(node.id);
+                        }}
+                      >
+                        Add sub
+                      </Button>
+                      {onGenerateSubsections && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-blue-600 hover:text-blue-800 flex items-center gap-2"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onGenerateSubsections(node.id);
+                          }}
+                        >
+                          {(
+                            <>
+                              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                              </svg>
+                              <span>AI分節化</span>
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </>
                   )}
                   <Button
                     size="sm"
@@ -78,26 +99,6 @@ export function NodeItem({
                   >
                     Delete
                   </Button>
-                </div>
-              </div>
-              <div className="pl-6 space-y-2 text-sm mt-2">
-                <div>
-                  <span className="font-medium">Description:</span>
-                  <p className="text-gray-600">{node.description}</p>
-                </div>
-                <div>
-                  <span className="font-medium">Purpose:</span>
-                  <p className="text-gray-600">{node.purpose}</p>
-                </div>
-                <div className="flex gap-4">
-                  <div>
-                    <span className="font-medium">Pages:</span>
-                    <span className="ml-1 text-gray-600">{node.n_pages || 'Not set'}</span>
-                  </div>
-                  <div>
-                    <span className="font-medium">Split:</span>
-                    <span className="ml-1 text-gray-600">{node.should_split ? 'Yes' : 'No'}</span>
-                  </div>
                 </div>
               </div>
             </div>

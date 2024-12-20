@@ -1,34 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { ProjectEditor } from './project-editor';
+import { Project } from '@/hooks/types';
 
-interface Node {
-  id: string;
-  title: string;
-  content: string;
-  type: 'section' | 'subsection';
-  status: 'draft' | 'in_progress' | 'review' | 'completed';
-  order: number;
-  parentId: string | null;
-  projectId: string;
-}
-
-interface Project {
-  id: string;
-  name: string;
-  userId: string;
-  nodes: Node[];
-}
-
-export default function ProjectPage({ params }: { params: { id: string } }) {
+export default function ProjectPage() {
+  const params = useParams();
+  const projectId = params.id as string;
   const [project, setProject] = useState<Project | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchProject = async () => {
       try {
-        const response = await fetch(`/api/projects/${params.id}`);
+        const response = await fetch(`/api/projects/${projectId}`);
         if (!response.ok) {
           throw new Error('Failed to fetch project');
         }
@@ -41,7 +27,7 @@ export default function ProjectPage({ params }: { params: { id: string } }) {
     };
 
     fetchProject();
-  }, [params.id]);
+  }, [projectId]);
 
   if (error) {
     return <div className="p-4 text-red-500">{error}</div>;

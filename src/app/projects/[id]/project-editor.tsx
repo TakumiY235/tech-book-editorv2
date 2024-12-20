@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, ChangeEvent } from 'react';
+import React, { useState, ChangeEvent, useEffect } from 'react';
 import { CreateNodeForm } from '@/components/projects/create-node-form';
 import { ProjectContent } from './project-content';
 import { NodeList } from '@/components/projects/node-list';
-import { useProjectEditor, type Project } from '@/hooks/useProjectEditor';
+import { useProjectEditor } from '@/hooks/useProjectEditor';
+import { Project } from '@/hooks/types';
 import { Input } from '@/components/ui/input';
 
 interface ProjectEditorProps {
@@ -25,23 +26,59 @@ export function ProjectEditor({ initialProject }: ProjectEditorProps) {
     handleCreateSubsection,
     generateContent,
     handleUpdateProjectMetadata,
+    generateStructureWithAI,
+    generateSubsectionStructure,
   } = useProjectEditor(initialProject);
 
   const [isEditing, setIsEditing] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [editedTitle, setEditedTitle] = useState(project.name);
   const [editedTargetAudience, setEditedTargetAudience] = useState(project.metadata?.targetAudience || '');
+  const [editedOverview, setEditedOverview] = useState(project.metadata?.overview || '');
+  const [editedPageCount, setEditedPageCount] = useState(project.metadata?.pageCount || 0);
+
+  // For debugging
+  useEffect(() => {
+    console.log('Organized nodes:', organizedNodes);
+  }, [organizedNodes]);
+
+  const handleGenerateStructure = async () => {
+    if (!project.name || !project.metadata?.targetAudience || !project.metadata?.overview || !project.metadata?.pageCount) {
+      alert('本のタイトル、対象読者、概要、ページ数を入力してください。');
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      await generateStructureWithAI({
+        title: project.name,
+        overview: project.metadata.overview,
+        targetAudience: project.metadata.targetAudience,
+        pageCount: project.metadata.pageCount
+      });
+    } catch (error) {
+      console.error('Error generating structure:', error);
+      alert('章立ての生成に失敗しました。');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleSaveMetadata = () => {
     handleUpdateProjectMetadata({
       name: editedTitle,
-      targetAudience: editedTargetAudience
+      targetAudience: editedTargetAudience,
+      metadata: {
+        overview: editedOverview,
+        pageCount: editedPageCount
+      }
     });
     setIsEditing(false);
   };
 
   return (
-    <div className="h-full flex">
-      <div className="w-1/3 border-r border-gray-200 p-4 bg-gray-50">
+    <div className="h-full flex overflow-hidden">
+      <div className="w-1/3 border-r border-gray-200 p-4 bg-gray-50 flex flex-col h-full">
         <div className="mb-4">
           <div className="space-y-4 mb-4">
             {isEditing ? (
@@ -66,6 +103,32 @@ export function ProjectEditor({ initialProject }: ProjectEditorProps) {
                     className="mb-2"
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    概要
+                  </label>
+                  <textarea
+                    value={editedOverview}
+                    onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setEditedOverview(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 mb-2"
+                    rows={4}
+                    placeholder="本の概要を入力してください"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    ページ数
+                  </label>
+                  <Input
+                    type="number"
+                    value={editedPageCount || ''}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setEditedPageCount(parseInt(e.target.value) || 0)}
+                    className="mb-2"
+                    min={1}
+                    step={1}
+                    placeholder="例: 200"
+                  />
+                </div>
                 <div className="flex gap-2">
                   <button
                     onClick={handleSaveMetadata}
@@ -82,11 +145,21 @@ export function ProjectEditor({ initialProject }: ProjectEditorProps) {
                 </div>
               </>
             ) : (
-              <div>
+              <div className="space-y-2">
                 <h2 className="text-xl font-bold">{project.name}</h2>
                 {project.metadata?.targetAudience && (
-                  <p className="text-sm text-gray-600 mt-1">
+                  <p className="text-sm text-gray-600">
                     対象読者: {project.metadata.targetAudience}
+                  </p>
+                )}
+                {project.metadata?.overview && (
+                  <p className="text-sm text-gray-600">
+                    概要: {project.metadata.overview}
+                  </p>
+                )}
+                {project.metadata?.pageCount && (
+                  <p className="text-sm text-gray-600">
+                    ページ数: {project.metadata.pageCount}ページ
                   </p>
                 )}
                 <button
@@ -97,6 +170,15 @@ export function ProjectEditor({ initialProject }: ProjectEditorProps) {
                 </button>
               </div>
             )}
+          </div>
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={handleGenerateStructure}
+              disabled={isGenerating}
+              className="inline-flex items-center px-4 py-2 bg-blue-500 text-white rounded-md font-semibold text-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isGenerating ? 'AI編集者が章立てを考えています...' : 'AIで章立てを生成'}
+            </button>
           </div>
           <div className="flex gap-2 mb-4">
             <CreateNodeForm
@@ -147,13 +229,22 @@ export function ProjectEditor({ initialProject }: ProjectEditorProps) {
           onDelete={handleDeleteNode}
           onUpdateTitle={handleUpdateNodeTitle}
           onCreateSubsection={handleCreateSubsection}
+          onGenerateSubsections={generateSubsectionStructure}
         />
       </div>
-      <div className="w-2/3 p-4">
+      <div className="w-2/3 p-4 overflow-y-auto h-full">
         <ProjectContent
           projectId={project.id}
           selectedNode={selectedNode || null}
-          onGenerateContent={generateContent}
+          onGenerateContent={(...args) => {
+            console.log('ProjectEditor: generateContent called with args:', args);
+            console.log('ProjectEditor: generateContent exists:', !!generateContent);
+            console.log('ProjectEditor: project metadata:', {
+              title: project.name,
+              targetAudience: project.metadata?.targetAudience
+            });
+            return generateContent(...args);
+          }}
           bookMetadata={{
             title: project.name,
             targetAudience: project.metadata?.targetAudience || ''

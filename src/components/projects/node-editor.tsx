@@ -1,96 +1,76 @@
-import { useEditor, EditorContent } from '@tiptap/react';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { EditorToolbar } from '../editor/editor-toolbar';
-import { createEditorConfig, saveEditorContent } from '../editor/editor-config';
-import { NodeEditorProps, EditorState } from '../editor/editor-types';
+import { useEditor, EditorContent, Editor } from '@tiptap/react';
+import { useCallback, useEffect, useRef, forwardRef, useImperativeHandle, ForwardedRef } from 'react';
+import { EditorToolbar } from '@/components/editor/editor-toolbar';
+import { createEditorConfig, saveEditorContent } from '@/components/editor/editor-config';
+import { NodeEditorProps, EditorState, NodeEditorHandle } from '@/components/editor/editor-types';
+import { useEditorState } from '../../hooks/useEditorState';
 
-export function NodeEditor({
-  initialContent,
-  projectId,
-  nodeId,
-  onSave,
-  bookTitle,
-  targetAudience,
-  onGenerateContent
-}: NodeEditorProps) {
-  const [state, setState] = useState<EditorState>({
-    isSaving: false,
-    isGenerating: false,
-    autoSaveStatus: '',
-    editor: null
-  });
-  const saveTimeoutRef = useRef<NodeJS.Timeout>();
-  const contentRef = useRef(initialContent);
+interface ContentGenerationProps {
+  nodeId: string;
+  bookTitle?: string;
+  targetAudience?: string;
+  onGenerateContent?: (nodeId: string, bookTitle: string, targetAudience: string) => Promise<boolean>;
+}
 
-  const handleSave = useCallback(async () => {
-    if (!state.editor || state.isSaving) return;
-    
-    setState(prev => ({ ...prev, isSaving: true, autoSaveStatus: 'Saving...' }));
+interface GenerationResult {
+  success: boolean;
+  reason?: {
+    hasBookTitle: boolean;
+    hasTargetAudience: boolean;
+    hasOnGenerateContent: boolean;
+  };
+  error?: string;
+}
 
-    try {
-      const success = await saveEditorContent(contentRef.current, projectId, nodeId);
-      if (!success) {
-        throw new Error('Failed to save content');
-      }
-
-      setState(prev => ({ ...prev, autoSaveStatus: 'Saved' }));
-      onSave?.();
-    } catch (error) {
-      console.error('Error saving content:', error);
-      setState(prev => ({ ...prev, autoSaveStatus: 'Save failed' }));
-    } finally {
-      setState(prev => ({ ...prev, isSaving: false }));
+function useContentGeneration({ nodeId, bookTitle, targetAudience, onGenerateContent }: ContentGenerationProps) {
+  const handleGenerateContent = useCallback(async (): Promise<GenerationResult> => {
+    if (!bookTitle || !targetAudience || !onGenerateContent) {
+      return {
+        success: false,
+        reason: {
+          hasBookTitle: !!bookTitle,
+          hasTargetAudience: !!targetAudience,
+          hasOnGenerateContent: !!onGenerateContent
+        }
+      };
     }
-  }, [state.editor, projectId, nodeId, onSave]);
 
-  const handleGenerateContent = async () => {
-    if (!bookTitle || !targetAudience || !onGenerateContent || state.isGenerating) return;
-
-    setState(prev => ({ ...prev, isGenerating: true }));
     try {
       await onGenerateContent(nodeId, bookTitle, targetAudience);
-      setState(prev => ({ ...prev, autoSaveStatus: 'Content generated' }));
+      return { success: true };
     } catch (error) {
-      console.error('Error generating content:', error);
-      setState(prev => ({ ...prev, autoSaveStatus: 'Generation failed' }));
-    } finally {
-      setState(prev => ({ ...prev, isGenerating: false }));
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      };
     }
-  };
+  }, [nodeId, bookTitle, targetAudience, onGenerateContent]);
 
-  const editor = useEditor(
-    createEditorConfig(
-      initialContent,
-      ({ editor }) => {
-        if (editor) {
-          const content = editor.getHTML();
-          const prevContent = contentRef.current;
+  return { handleGenerateContent };
+}
 
-          if (content !== prevContent) {
-            contentRef.current = content;
+function useAutoSave(
+  editor: Editor | null,
+  projectId: string,
+  nodeId: string,
+  onSave?: () => void
+) {
+  const saveTimeoutRef = useRef<NodeJS.Timeout>();
 
-            if (saveTimeoutRef.current) {
-              clearTimeout(saveTimeoutRef.current);
-            }
-            saveTimeoutRef.current = setTimeout(() => {
-              handleSave();
-            }, 2000);
-          }
-        }
-      },
-      {
-        onCreate: ({ editor }) => setState(prev => ({ ...prev, editor })),
-        onDestroy: () => setState(prev => ({ ...prev, editor: null }))
-      }
-    )
-  );
-
-  useEffect(() => {
-    if (editor && initialContent !== editor.getHTML()) {
-      editor.commands.setContent(initialContent);
-      contentRef.current = initialContent;
+  const handleSave = useCallback(async () => {
+    if (!editor) return false;
+    
+    try {
+      const content = editor.getHTML();
+      const success = await saveEditorContent(content, projectId, nodeId);
+      if (!success) throw new Error('Failed to save content');
+      
+      onSave?.();
+      return true;
+    } catch (error) {
+      return false;
     }
-  }, [editor, initialContent]);
+  }, [editor, projectId, nodeId, onSave]);
 
   useEffect(() => {
     return () => {
@@ -100,25 +80,119 @@ export function NodeEditor({
     };
   }, []);
 
-  if (!editor) {
-    return null;
-  }
+  const scheduleAutoSave = useCallback(() => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    saveTimeoutRef.current = setTimeout(() => {
+      handleSave();
+    }, 2000);
+  }, [handleSave]);
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <EditorToolbar
-          editor={editor}
-          isGenerating={state.isGenerating}
-          onGenerateContent={handleGenerateContent}
-          bookTitle={bookTitle}
-          targetAudience={targetAudience}
-        />
-        <span className="text-sm text-gray-500">
-          {state.isGenerating ? 'Generating content...' : state.autoSaveStatus}
-        </span>
-      </div>
-      <EditorContent editor={editor} />
-    </div>
-  );
+  return { handleSave, scheduleAutoSave };
 }
+
+export const NodeEditor = forwardRef<NodeEditorHandle, NodeEditorProps>(
+  (props: NodeEditorProps, ref: ForwardedRef<NodeEditorHandle>) => {
+    const {
+      initialContent,
+      projectId,
+      nodeId,
+      onSave,
+      bookTitle,
+      targetAudience,
+      onGenerateContent
+    } = props;
+
+    const { state, setState, contentRef } = useEditorState(initialContent);
+    const { handleGenerateContent } = useContentGeneration({
+      nodeId,
+      bookTitle,
+      targetAudience,
+      onGenerateContent
+    });
+    const { handleSave, scheduleAutoSave } = useAutoSave(state.editor, projectId, nodeId, onSave);
+
+    useImperativeHandle(ref, () => ({
+      getContent: () => contentRef.current
+    }));
+
+    const handleEditorUpdate = useCallback(({ editor }: { editor: Editor }) => {
+      if (editor) {
+        const content = editor.getHTML();
+        const prevContent = contentRef.current;
+
+        if (content !== prevContent) {
+          contentRef.current = content;
+          setState((prev: EditorState) => ({ ...prev, content }));
+          scheduleAutoSave();
+        }
+      }
+    }, [contentRef, setState, scheduleAutoSave]);
+
+    const handleGenerateContentWithState = async () => {
+      if (state.isGenerating) return;
+
+      setState((prev: EditorState) => ({ ...prev, isGenerating: true, autoSaveStatus: 'Generating...' }));
+      const result = await handleGenerateContent();
+      setState((prev: EditorState) => ({
+        ...prev,
+        isGenerating: false,
+        autoSaveStatus: result.success ? 'Content generated' : 'Generation failed'
+      }));
+    };
+
+    const editor = useEditor(
+      createEditorConfig(
+        initialContent,
+        handleEditorUpdate,
+        {
+          onCreate: ({ editor }) => setState((prev: EditorState) => ({ ...prev, editor })),
+          onDestroy: () => setState((prev: EditorState) => ({ ...prev, editor: null }))
+        }
+      )
+    );
+
+    useEffect(() => {
+      if (editor && initialContent !== editor.getHTML()) {
+        // Save current scroll position before updating editor content
+        const scrollPos = editor.view.dom.scrollTop;
+        
+        editor.commands.setContent(initialContent);
+        contentRef.current = initialContent;
+        setState((prev: EditorState) => ({ ...prev, content: initialContent }));
+        
+        // Restore scroll position
+        requestAnimationFrame(() => {
+          if (editor && editor.view) {
+            editor.view.dom.scrollTop = scrollPos;
+          }
+        });
+      }
+    }, [editor, initialContent, setState, contentRef]);
+
+    if (!editor) {
+      return null;
+    }
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <EditorToolbar
+            editor={editor}
+            isGenerating={state.isGenerating}
+            onGenerateContent={handleGenerateContentWithState}
+            bookTitle={bookTitle}
+            targetAudience={targetAudience}
+          />
+          <span className="text-sm text-gray-500">
+            {state.isGenerating ? 'Generating content...' : state.autoSaveStatus}
+          </span>
+        </div>
+        <EditorContent editor={editor} />
+      </div>
+    );
+  }
+);
+
+NodeEditor.displayName = 'NodeEditor';

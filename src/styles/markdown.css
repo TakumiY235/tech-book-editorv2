@@ -1,0 +1,292 @@
+/* Base editor styles */
+.markdown-editor {
+  @apply max-w-none p-4 text-gray-900 leading-relaxed;
+}
+
+/* Code block styles */
+.markdown-code-block {
+  @apply bg-gray-50 rounded-lg p-4 my-4 font-mono text-sm whitespace-pre-wrap relative overflow-x-auto border border-gray-200 shadow-sm;
+  tab-size: 2;
+}
+
+.markdown-code-block pre {
+  @apply m-0 overflow-x-auto;
+}
+
+.markdown-code-block code {
+  @apply text-gray-800 block;
+}
+
+/* LaTeX-specific styles */
+.latex-lstlisting {
+  @apply bg-gray-50 rounded-lg p-4 my-4 font-mono text-sm whitespace-pre-wrap relative overflow-x-auto border border-gray-200;
+}
+
+.latex-lstlisting::before {
+  content: attr(data-language);
+  @apply absolute top-2 right-2 text-xs text-gray-500 font-sans px-2 py-1 bg-gray-100 rounded-md border border-gray-200;
+}
+
+.latex-section {
+  @apply font-bold text-gray-800 border-b border-gray-200 pb-2;
+}
+
+.latex-section[data-level="1"] {
+  @apply text-3xl mt-8 mb-4;
+}
+
+.latex-section[data-level="2"] {
+  @apply text-2xl mt-6 mb-3;
+}
+
+.latex-section[data-level="3"] {
+  @apply text-xl mt-4 mb-2;
+}
+
+.latex-math {
+  @apply my-4 py-2 px-4 overflow-x-auto text-center bg-gray-50 rounded-lg border border-gray-200;
+}
+
+.latex-itemize {
+  @apply my-4 pl-6 space-y-2 list-disc marker:text-gray-400;
+}
+
+.latex-item {
+  @apply my-1 leading-relaxed;
+}
+
+/* Syntax highlighting */
+.hljs-keyword { @apply text-purple-600; }
+.hljs-string { @apply text-green-600; }
+.hljs-comment { @apply text-gray-500 italic; }
+.hljs-function { @apply text-blue-600; }
+.hljs-number { @apply text-orange-600; }
+.hljs-operator { @apply text-gray-600; }
+.hljs-class { @apply text-yellow-600; }
+
+/* Inline code styles */
+.markdown-editor :not(pre) > code {
+  @apply bg-gray-100 rounded-md px-1.5 py-0.5 font-mono text-sm text-gray-800 border border-gray-200;
+}
+
+/* Math block styles */
+.math-block {
+  @apply my-4 py-2 overflow-x-auto text-center bg-gray-50 rounded-lg border border-gray-200;
+}
+
+.math-inline {
+  @apply inline-block mx-1 bg-gray-50 px-1 rounded;
+}
+
+/* Heading styles */
+.markdown-editor h1 {
+  @apply text-3xl font-bold mt-8 mb-4 border-b border-gray-200 pb-2 text-gray-800;
+}
+
+.markdown-editor h2 {
+  @apply text-2xl font-bold mt-6 mb-3 border-b border-gray-200 pb-1 text-gray-800;
+}
+
+.markdown-editor h3 {
+  @apply text-xl font-bold mt-4 mb-2 text-gray-800;
+}
+
+/* List styles with improved hierarchy */
+.markdown-editor ul,
+.markdown-editor ol {
+  @apply my-4 space-y-2;
+}
+
+.markdown-editor ul {
+  @apply list-disc marker:text-gray-400;
+}
+
+.markdown-editor ol {
+  @apply list-decimal marker:text-gray-500;
+}
+
+/* Nested list styles with visual hierarchy */
+.markdown-editor ul,
+.markdown-editor ol {
+  @apply pl-6;
+}
+
+.markdown-editor ul ul,
+.markdown-editor ul ol,
+.markdown-editor ol ul,
+.markdown-editor ol ol {
+  @apply my-2 pl-6 border-l border-gray-100;
+}
+
+.markdown-editor li {
+  @apply my-1 leading-relaxed;
+}
+
+.markdown-editor li > p {
+  @apply my-1 leading-relaxed;
+}
+
+.markdown-editor li:last-child {
+  @apply mb-0;
+}
+
+/* Blockquote styles */
+.markdown-editor blockquote {
+  @apply border-l-4 border-blue-300 pl-4 my-4 italic bg-blue-50 py-2 pr-4 rounded-r text-gray-700;
+}
+
+/* Bold and italic styles */
+.markdown-editor strong {
+  @apply font-bold text-gray-900;
+}
+
+.markdown-editor em {
+  @apply italic text-gray-800;
+}
+
+/* Link styles */
+.markdown-editor a {
+  @apply text-blue-600 hover:text-blue-800 underline decoration-blue-300 hover:decoration-blue-500 transition-colors duration-150;
+}
+
+/* Table styles */
+.markdown-editor table {
+  @apply w-full border-collapse my-4 block overflow-x-auto rounded-lg border border-gray-200;
+}
+
+.markdown-editor th,
+.markdown-editor td {
+  @apply border border-gray-200 p-2 min-w-[120px];
+}
+
+.markdown-editor th {
+  @apply bg-gray-50 font-bold text-gray-700;
+}
+
+.markdown-editor tr:nth-child(even) {
+  @apply bg-gray-50;
+}
+
+/* Paragraph spacing and text */
+.markdown-editor p {
+  @apply my-4 leading-relaxed text-gray-800;
+}
+
+/* Language tag for code blocks */
+.markdown-code-block[data-language]::before {
+  content: attr(data-language);
+  @apply absolute top-2 right-2 text-xs text-gray-500 font-sans px-2 py-1 bg-gray-100 rounded-md border border-gray-200;
+}
+
+/* Math display styles */
+.markdown-editor .math-display {
+  @apply block my-4 text-center overflow-x-auto bg-gray-50 p-4 rounded-lg border border-gray-200;
+}
+
+.markdown-editor .math-inline {
+  @apply inline-block mx-1 bg-gray-50 px-1 rounded border border-gray-100;
+}
+
+/* Horizontal rule */
+.markdown-editor hr {
+  @apply my-8 border-t-2 border-gray-100;
+}
+
+/* Focus styles */
+.markdown-editor:focus {
+  @apply outline-none ring-2 ring-blue-100 ring-opacity-50 rounded-lg;
+}
+
+/* Selection styles */
+.markdown-editor ::selection {
+  @apply bg-blue-100 text-blue-900;
+}
+
+/* Placeholder styles */
+.markdown-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  @apply text-gray-400 float-left h-0 pointer-events-none;
+}
+
+/* Task list styles */
+.markdown-editor ul[data-type="taskList"] {
+  @apply list-none pl-0 space-y-2;
+}
+
+.markdown-editor ul[data-type="taskList"] li {
+  @apply flex items-start gap-2 bg-gray-50 p-2 rounded-lg border border-gray-100;
+}
+
+.markdown-editor ul[data-type="taskList"] li > label {
+  @apply mr-2 mt-1;
+}
+
+.markdown-editor ul[data-type="taskList"] li > div {
+  @apply flex-1;
+}
+
+/* Code block with line numbers */
+.markdown-code-block.with-numbers {
+  @apply pl-12 relative;
+}
+
+.markdown-code-block.with-numbers::before {
+  content: attr(data-line-numbers);
+  @apply absolute left-0 top-0 bottom-0 w-10 bg-gray-100 text-right pr-2 text-gray-500 select-none border-r border-gray-200 rounded-l-lg;
+}
+
+/* Break line visualization */
+.markdown-editor .hard-break {
+  @apply relative;
+}
+
+.markdown-editor .hard-break::after {
+  content: "↵";
+  @apply text-gray-300 text-sm ml-1;
+}
+
+/* Highlighted text */
+.markdown-editor .highlighted-text {
+  @apply bg-yellow-100 px-1 rounded;
+}
+
+/* Improved list spacing */
+.markdown-editor ul li::marker {
+  @apply text-gray-400;
+}
+
+.markdown-editor ol li::marker {
+  @apply text-gray-500 font-medium;
+}
+
+/* Code block improvements */
+.markdown-code-block:hover .copy-button {
+  @apply opacity-100;
+}
+
+.copy-button {
+  @apply absolute top-2 right-2 opacity-0 transition-opacity duration-200 
+         px-2 py-1 text-xs bg-gray-700 text-white rounded hover:bg-gray-800 
+         focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50;
+}
+
+/* Editor toolbar styles */
+.editor-toolbar {
+  @apply flex items-center gap-2 p-2 bg-gray-50 border-b border-gray-200 sticky top-0 z-10;
+}
+
+.editor-toolbar button {
+  @apply p-1.5 rounded hover:bg-gray-200 transition-colors duration-150
+         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50;
+}
+
+.editor-toolbar button.active {
+  @apply bg-gray-200 text-blue-600;
+}
+
+/* Improved link appearance */
+.markdown-link {
+  @apply text-blue-600 hover:text-blue-800 underline decoration-blue-300 
+         hover:decoration-blue-500 transition-colors duration-150
+         focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50;
+}

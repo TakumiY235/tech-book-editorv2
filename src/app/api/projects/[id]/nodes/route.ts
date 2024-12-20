@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma/db';
-import type { Prisma } from '@prisma/client';
+import { Node as PrismaNode, Prisma } from '@prisma/client';
 import { load } from 'js-yaml';
+import { BookNode } from '@/hooks/types';
 
 interface CreateNodeRequest {
   title: string;
@@ -14,11 +15,29 @@ interface CreateNodeRequest {
   should_split?: boolean;
 }
 
+// Transform database node to match expected BookNode type
+function transformNode(dbNode: PrismaNode): BookNode {
+  return {
+    id: dbNode.id,
+    title: dbNode.title,
+    content: dbNode.content || '',
+    description: dbNode.description || '',
+    purpose: dbNode.purpose || '',
+    type: dbNode.type,
+    status: dbNode.status,
+    order: dbNode.order,
+    parentId: dbNode.parentId,
+    n_pages: dbNode.n_pages,
+    should_split: dbNode.should_split,
+  };
+}
+
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
+    const { id } = await context.params;
     const contentType = request.headers.get('content-type') || '';
     
     if (contentType.includes('multipart/form-data')) {
@@ -45,18 +64,17 @@ export async function POST(
       // Delete existing nodes
       await prisma.node.deleteMany({
         where: {
-          projectId: params.id,
+          projectId: id,
         },
       });
 
-      // Create new nodes
       // Create new nodes
       for (const node of yamlData.project.nodes) {
         await prisma.node.create({
           data: {
             title: node.title,
             type: node.type.includes('section') ? 'section' : 'subsection',
-            projectId: params.id,
+            projectId: id,
             parentId: node.parentId,
             order: node.order,
             content: '',
@@ -71,11 +89,11 @@ export async function POST(
 
       const updatedNodes = await prisma.node.findMany({
         where: {
-          projectId: params.id,
+          projectId: id,
         },
       });
 
-      return NextResponse.json(updatedNodes);
+      return NextResponse.json(updatedNodes.map(transformNode));
     }
 
     // Handle regular node creation
@@ -112,7 +130,7 @@ export async function POST(
         );
       }
 
-      if (parentNode.projectId !== params.id) {
+      if (parentNode.projectId !== id) {
         return NextResponse.json(
           { error: 'Parent node must belong to the same project' },
           { status: 400 }
@@ -123,7 +141,7 @@ export async function POST(
     // Get the highest order number for nodes with the same parent
     const lastNode = await prisma.node.findFirst({
       where: {
-        projectId: params.id,
+        projectId: id,
         ...(parentId ? { parentId } : {})
       },
       orderBy: {
@@ -139,7 +157,7 @@ export async function POST(
         title,
         content: content || '',
         type: type === 'section' ? 'section' : 'subsection',
-        projectId: params.id,
+        projectId: id,
         parentId,
         order: newOrder,
         description: description || '',
@@ -148,7 +166,8 @@ export async function POST(
         should_split: should_split
       },
     });
-    return NextResponse.json(node);
+
+    return NextResponse.json(transformNode(node));
   } catch (error) {
     console.error('Error creating node:', error);
     return NextResponse.json(
@@ -160,19 +179,20 @@ export async function POST(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
+    const { id } = await context.params;
     const nodes = await prisma.node.findMany({
       where: {
-        projectId: params.id,
+        projectId: id,
       },
       orderBy: [
         { order: 'asc' },
       ],
     });
 
-    return NextResponse.json(nodes);
+    return NextResponse.json(nodes.map(transformNode));
   } catch (error) {
     console.error('Error fetching nodes:', error);
     return NextResponse.json(

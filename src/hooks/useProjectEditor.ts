@@ -4,7 +4,7 @@ import { Project } from '../types/project';
 import { useNodeOperations } from './useNodeOperations';
 import { useProjectMetadata } from './useProjectMetadata';
 import { useAIOperations } from './useAIOperations';
-import { useProjectImport } from './useProjectImport';
+import { useProjectImport } from '../components/projects/import/yaml-import';
 import { useProjectStateManagement } from './core/useStateManagement';
 import { handleProjectEditorError } from './core/useErrorHandling';
 
@@ -14,7 +14,6 @@ export function useProjectEditor(initialProject: Project) {
     selectedNodeId,
     setSelectedNodeId,
     setProject,
-    organizedNodes,
     ...stateManagement
   } = useProjectStateManagement(initialProject);
 
@@ -37,7 +36,6 @@ export function useProjectEditor(initialProject: Project) {
     selectedNodeId,
     setSelectedNodeId,
     handleNodeCreated,
-    organizedNodes,
     ...nodeOperations,
     ...projectMetadata,
     ...aiOperations,

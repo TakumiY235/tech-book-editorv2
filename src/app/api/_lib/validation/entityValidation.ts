@@ -1,7 +1,8 @@
 import { getRepositories } from '../../../../services/prisma/repositories';
 import { ApiError } from '../errors/ApiError';
+import { Project, Node } from '@prisma/client';
 
-export async function validateProjectExists(projectId: string) {
+export async function validateProjectExists(projectId: string): Promise<Project> {
   const { projectRepository } = getRepositories();
   const project = await projectRepository.findById(projectId);
   
@@ -12,7 +13,7 @@ export async function validateProjectExists(projectId: string) {
   return project;
 }
 
-export async function validateNodeExists(nodeId: string, projectId: string) {
+export async function validateNodeExists(nodeId: string, projectId: string): Promise<Node> {
   const { nodeRepository } = getRepositories();
   const node = await nodeRepository.findById(nodeId);
   
@@ -23,7 +24,7 @@ export async function validateNodeExists(nodeId: string, projectId: string) {
   return node;
 }
 
-export async function validateParentNodeExists(parentId: string, projectId: string) {
+export async function validateParentNodeExists(parentId: string, projectId: string): Promise<Node> {
   const { nodeRepository } = getRepositories();
   const parentNode = await nodeRepository.findById(parentId);
   

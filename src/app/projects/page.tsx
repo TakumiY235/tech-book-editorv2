@@ -1,6 +1,6 @@
 import { prisma } from '@/services/prisma/db'
 import { Button } from '@/components/ui/button'
-import { ProjectCard } from '@/components/projects/display/project-card'
+import { ProjectCard } from '@/components/projects/project-management/display/project-card'
 import Link from 'next/link';
 
 export default async function ProjectsPage() {

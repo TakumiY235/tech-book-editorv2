@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { NodeType, NodeStatus } from '@prisma/client';
+import { ApiError } from '../errors/ApiError';
 import { formatSuccessResponse } from '../responses/formatResponse';
 import { getRepositories } from '../../../../services/prisma/repositories';
 import { validateProjectExists, validateNodeExists, validateParentNodeExists } from '../validation/entityValidation';
-import { NodeType, NodeStatus } from '@prisma/client';
-import { deleteNodeAndChildren, transformNode } from '../operations/nodeOperations';
+import { transformNode } from '../operations/nodeOperations';
 
 interface CreateNodeRequest {
   title: string;
@@ -29,43 +30,52 @@ export const handleCreateNode = async (
   validatedData: CreateNodeRequest,
   context: { params: { id: string } }
 ) => {
-  const { nodeRepository } = getRepositories();
-  const { id } = context.params;
+  try {
+    const { nodeRepository } = getRepositories();
+    const params = await context.params;
+    const id = params.id;
 
-  // プロジェクトの存在確認
-  await validateProjectExists(id);
+    // プロジェクトの存在確認
+    await validateProjectExists(id);
 
-  // 親ノードの存在確認（指定されている場合）
-  if (validatedData.parentId) {
-    await validateParentNodeExists(validatedData.parentId, id);
-  }
+    // 親ノードの存在確認（指定されている場合）
+    if (validatedData.parentId) {
+      await validateParentNodeExists(validatedData.parentId, id);
+    }
 
-  // 同じ階層のノードの最大order値を取得
-  const siblings = await nodeRepository.findMany({
-    where: {
+    // 同じ階層のノードの最大order値を取得
+    const siblings = await nodeRepository.findMany({
+      where: {
+        projectId: id,
+        parentId: validatedData.parentId || null,
+      },
+      orderBy: {
+        order: 'desc',
+      },
+      take: 1,
+    });
+
+    const order = siblings.length > 0 ? siblings[0].order + 1 : 0;
+
+    // ノードを作成
+    const node = await nodeRepository.createNode({
       projectId: id,
-      parentId: validatedData.parentId || null,
-    },
-    orderBy: {
-      order: 'desc',
-    },
-    take: 1,
-  });
+      parentId: validatedData.parentId,
+      type: validatedData.type,
+      title: validatedData.title,
+      description: validatedData.description,
+      purpose: validatedData.purpose,
+      order,
+    });
 
-  const order = siblings.length > 0 ? siblings[0].order + 1 : 0;
-
-  // ノードを作成
-  const node = await nodeRepository.createNode({
-    projectId: id,
-    parentId: validatedData.parentId,
-    type: validatedData.type,
-    title: validatedData.title,
-    description: validatedData.description,
-    purpose: validatedData.purpose,
-    order,
-  });
-
-  return formatSuccessResponse(node, 201);
+    return formatSuccessResponse(node, 201);
+  } catch (error) {
+    console.error('Error creating node:', error);
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw ApiError.internal('Failed to create node');
+  }
 };
 
 // ノード一覧取得ハンドラー
@@ -73,14 +83,27 @@ export const handleGetNodes = async (
   request: NextRequest,
   context: { params: { id: string } }
 ) => {
-  const { nodeRepository } = getRepositories();
-  const { id } = context.params;
+  try {
+    const { nodeRepository } = getRepositories();
+    const params = await context.params;
+    const id = params.id;
 
-  // プロジェクトの存在確認
-  await validateProjectExists(id);
+    // プロジェクトの存在確認
+    await validateProjectExists(id);
 
-  const nodes = await nodeRepository.findByProjectId(id);
-  return formatSuccessResponse(nodes);
+    const nodes = await nodeRepository.findByProjectId(id);
+    if (!nodes.length) {
+      throw ApiError.notFound('No nodes found for this project');
+    }
+
+    return formatSuccessResponse(nodes);
+  } catch (error) {
+    console.error('Error getting nodes:', error);
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw ApiError.internal('Failed to get nodes');
+  }
 };
 
 // ノード更新ハンドラー
@@ -89,7 +112,8 @@ export const handleUpdateNode = async (
   context: { params: { id: string; nodeId: string } }
 ) => {
   try {
-    const { id, nodeId } = context.params;
+    const params = await context.params;
+    const { id, nodeId } = params;
     const updates = await request.json();
     const allowedUpdates = ['title', 'content', 'type', 'status', 'description', 'purpose', 'keywords'] as const;
     
@@ -108,10 +132,7 @@ export const handleUpdateNode = async (
 
     // Only proceed with update if there are valid fields to update
     if (Object.keys(validUpdates).length === 0) {
-      return NextResponse.json(
-        { error: 'No valid fields to update' },
-        { status: 400 }
-      );
+      throw ApiError.badRequest('No valid fields to update');
     }
 
     const { nodeRepository } = getRepositories();
@@ -120,10 +141,10 @@ export const handleUpdateNode = async (
     return formatSuccessResponse(transformNode(node));
   } catch (error) {
     console.error('Error updating node:', error);
-    return NextResponse.json(
-      { error: 'Failed to update node' },
-      { status: 500 }
-    );
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw ApiError.internal('Failed to update node');
   }
 };
 
@@ -133,18 +154,21 @@ export const handleDeleteNode = async (
   context: { params: { id: string; nodeId: string } }
 ) => {
   try {
-    const { id, nodeId } = context.params;
+    const params = await context.params;
+    const { id, nodeId } = params;
+    
     // プロジェクトとノードの存在確認
     await validateProjectExists(id);
     await validateNodeExists(nodeId, id);
 
-    await deleteNodeAndChildren(id, nodeId);
+    const { nodeRepository } = getRepositories();
+    await nodeRepository.deleteWithChildren(nodeId);
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error('Error deleting node:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete node' },
-      { status: 500 }
-    );
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw ApiError.internal('Failed to delete node');
   }
 };

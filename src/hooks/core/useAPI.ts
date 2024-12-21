@@ -12,6 +12,9 @@ type ProjectMetadataUpdates = {
   };
 };
 
+type NodeType = BookNode['type'];
+type NodeStatus = BookNode['status'];
+
 // API Endpoints
 const API_ENDPOINTS = {
   project: (projectId: string) => `/api/projects/${projectId}`,
@@ -35,14 +38,20 @@ export function useAPI() {
     const response = await fetch(url, options);
     
     if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(data.error || errorMessage);
+      // For non-204 responses, try to get error details from response body
+      if (response.status !== 204) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || `${errorMessage} (${response.status})`);
+      }
+      throw new Error(`${errorMessage} (${response.status})`);
     }
 
-    if (options.method === 'DELETE') {
+    // For successful DELETE operations (204 No Content)
+    if (response.status === 204 || options.method === 'DELETE') {
       return undefined as T;
     }
 
+    // For all other successful responses, parse JSON
     const result = await response.json();
     return result.data;
   };
@@ -117,6 +126,30 @@ export function useAPI() {
           body: JSON.stringify({ title: newTitle }),
         },
         'Failed to update title'
+      );
+    },
+
+    updateNodeMetadata: async (projectId: string, nodeId: string, type: NodeType, status: NodeStatus): Promise<boolean> => {
+      return fetchWithError(
+        API_ENDPOINTS.node(projectId, nodeId),
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type, status }),
+        },
+        'Failed to update node metadata'
+      );
+    },
+
+    updateNodeContent: async (projectId: string, nodeId: string, content: string): Promise<boolean> => {
+      return fetchWithError(
+        API_ENDPOINTS.node(projectId, nodeId),
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content }),
+        },
+        'Failed to update node content'
       );
     },
 

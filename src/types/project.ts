@@ -1,11 +1,13 @@
+import { NodeStatus, NodeType } from '@prisma/client';
+
 export interface Node {
   id: string;
   title: string;
   content: string;
   description: string;
   purpose: string;
-  type: 'section' | 'subsection';
-  status: 'draft' | 'in_progress' | 'review' | 'completed' | 'generating';
+  type: NodeType;
+  status: NodeStatus;
   order: number;
   parentId: string | null;
   n_pages: number;
@@ -34,10 +36,27 @@ export interface BookMetadata {
   pageCount: number;
 }
 
+export interface NodeCreateInput {
+  projectId: string;
+  parentId?: string;
+  type: NodeType;
+  title: string;
+  description?: string;
+  purpose?: string;
+  order: number;
+  status?: NodeStatus;
+  n_pages?: number;
+  should_split?: boolean;
+}
+
+export interface GenerateStructureOptions {
+  projectId: string;
+  nodeId?: string;
+  requestBody?: any;
+}
+
 // Aliases for backward compatibility
 export type BookNode = Node;
-
-export type NodeType = 'section' | 'subsection';
 
 export interface ChapterStructure {
   id: string;

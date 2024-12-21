@@ -15,14 +15,34 @@ export class AnthropicClient {
 
   async makeRequest(prompt: string): Promise<string> {
     try {
+      console.log('🤖 Anthropic API Request:', {
+        model: this.config.model,
+        maxTokens: this.config.maxTokens,
+        temperature: this.config.temperature,
+        prompt: prompt.substring(0, 100) + '...' // 長いプロンプトは省略
+      });
+
       const response = await this.anthropic.messages.create({
         model: this.config.model,
         max_tokens: this.config.maxTokens,
         temperature: this.config.temperature,
         messages: [{ role: "user", content: prompt }]
+      }) as AnthropicTextResponse;
+
+      const firstContent = response.content[0];
+      if (firstContent.type !== 'text') {
+        throw new Error('Expected text response from API');
+      }
+
+      console.log('🤖 Anthropic API Response:', {
+        status: 'success',
+        contentLength: firstContent.text.length,
+        tokens: response.usage
       });
 
-      return this.extractTextContent(response as AnthropicTextResponse);
+      console.log('📝 Response Content:', firstContent.text.substring(0, 100) + '...');
+
+      return firstContent.text;
     } catch (error) {
       this.handleApiError(error);
       throw error; // This line will never be reached due to handleApiError always throwing

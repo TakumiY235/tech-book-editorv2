@@ -1,21 +1,11 @@
 import { useState } from 'react';
-import { Node } from '../types/project';
-
-interface NodeCreationData {
-  title: string;
-  type: 'section' | 'subsection';
-  parentId: string | null;
-  description: string;
-  purpose: string;
-  n_pages: number;
-  should_split: boolean;
-}
+import { NodeCreateInput } from '../types/project';
 
 export function useNodeCreation(projectId: string) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const createNode = async (data: NodeCreationData): Promise<boolean> => {
+  const createNode = async (data: Omit<NodeCreateInput, 'projectId'>): Promise<boolean> => {
     setIsLoading(true);
     setError('');
 

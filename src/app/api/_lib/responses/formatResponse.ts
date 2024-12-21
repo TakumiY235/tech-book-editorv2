@@ -1,55 +1,29 @@
-import { NextResponse } from 'next/server';
 import { ApiError } from '../errors/ApiError';
-import { ErrorService } from '@/services/errors/ErrorService';
+import { ErrorService } from '../../../../services/errors/ErrorService';
 
+/**
+ * 成功レスポンスを生成
+ * @deprecated Use ApiError.formatSuccess instead
+ */
 export function formatSuccessResponse(data: any, status = 200) {
-  return NextResponse.json(
-    {
-      success: true,
-      data,
-    },
-    { status }
-  );
+  return ApiError.formatSuccess(data, status);
 }
 
+/**
+ * エラーレスポンスを生成
+ * @deprecated Use error.toResponse() or ApiError static methods instead
+ */
 export function formatErrorResponse(error: Error | ErrorService) {
-  if (error instanceof ErrorService) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          message: error.message,
-          code: error.code,
-          details: error.details,
-        },
-      },
-      { status: error.status }
-    );
+  if (error instanceof ApiError) {
+    return error.toResponse();
   }
-
-  console.error('Unhandled error:', error);
-  return NextResponse.json(
-    {
-      success: false,
-      error: {
-        message: 'Internal server error',
-        code: 'INTERNAL_ERROR',
-      },
-    },
-    { status: 500 }
-  );
+  return ApiError.fromError(error).toResponse();
 }
 
+/**
+ * バリデーションエラーレスポンスを生成
+ * @deprecated Use ApiError.validation instead
+ */
 export function formatValidationErrorResponse(errors: Record<string, string[]>) {
-  return NextResponse.json(
-    {
-      success: false,
-      error: {
-        message: 'Validation failed',
-        code: 'VALIDATION_ERROR',
-        details: errors,
-      },
-    },
-    { status: 400 }
-  );
+  return ApiError.validation(errors);
 }

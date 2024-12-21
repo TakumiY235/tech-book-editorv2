@@ -2,7 +2,7 @@
 
 import { useState, useRef, Dispatch, SetStateAction } from 'react';
 import { Project, BookNode, Node, OrganizedNode } from '../../types/project';
-import { EditorState } from '../../components/editor/core/types/editor-types';
+import { EditorState, FontSize } from '../../components/editor/core/types/editor-types';
 
 // Types
 type ProjectMetadataUpdates = {
@@ -17,15 +17,21 @@ type ProjectMetadataUpdates = {
 type NodeStatus = 'generating' | 'completed';
 
 // Editor State Management
-export function useEditorStateManagement(initialContent: string) {
-  const contentRef = useRef<string>(initialContent);
+interface InitialEditorState {
+  content: string;
+  fontSize?: FontSize;
+}
+
+export function useEditorStateManagement({ content, fontSize = 'normal' }: InitialEditorState) {
+  const contentRef = useRef<string>(content);
   const [state, setState] = useState<EditorState>({
     isSaving: false,
     isGenerating: false,
     autoSaveStatus: 'Ready',
     editor: null,
-    content: initialContent,
-    isPreview: false
+    content: content,
+    isPreview: false,
+    fontSize
   });
 
   return {

@@ -1,5 +1,5 @@
 import { withErrorHandling, withValidation, withPerformanceLogging } from '../middleware';
-import { CreateProjectRequest } from '../../../types/api/projects';
+import { CreateProjectRequest } from '../_lib/types/projects';
 import { createProjectSchema } from '../_lib/validation/schemas';
 import { handleCreateProject, handleGetProjects } from '../_lib/handlers/projectHandlers';
 

@@ -1,12 +1,16 @@
 import { Editor } from '@tiptap/react';
 import { Button } from '../../../ui/button';
 
+import { FontSize } from '../../core/types/editor-types';
+
 interface EditorToolbarProps {
   editor: Editor;
   isGenerating?: boolean;
   onGenerateContent?: () => void;
   bookTitle?: string;
   targetAudience?: string;
+  fontSize: FontSize;
+  onFontSizeChange: (size: FontSize) => void;
 }
 
 export function EditorToolbar({
@@ -14,7 +18,9 @@ export function EditorToolbar({
   isGenerating,
   onGenerateContent,
   bookTitle,
-  targetAudience
+  targetAudience,
+  fontSize,
+  onFontSizeChange
 }: EditorToolbarProps) {
   console.log('EditorToolbar: Rendering with props:', {
     isGenerating,
@@ -26,55 +32,6 @@ export function EditorToolbar({
   return (
     <div className="flex items-center justify-between">
       <div className="flex space-x-2">
-        <Button
-          onClick={() => {
-            const title = prompt('セクションタイトルを入力:', '新しいセクション');
-            if (title) {
-              editor.chain().focus().insertContent({
-                type: 'latexSection',
-                attrs: { level: 1, title },
-                content: [{ type: 'text', text: `\\section{${title}}` }]
-              }).run();
-            }
-          }}
-          className={editor.isActive('latexSection', { level: 1 }) ? 'bg-gray-200' : ''}
-          size="sm"
-        >
-          Section
-        </Button>
-        <Button
-          onClick={() => {
-            const title = prompt('サブセクションタイトルを入力:', '新しいサブセクション');
-            if (title) {
-              editor.chain().focus().insertContent({
-                type: 'latexSection',
-                attrs: { level: 2, title },
-                content: [{ type: 'text', text: `\\subsection{${title}}` }]
-              }).run();
-            }
-          }}
-          className={editor.isActive('latexSection', { level: 2 }) ? 'bg-gray-200' : ''}
-          size="sm"
-        >
-          Subsection
-        </Button>
-        <Button
-          onClick={() => {
-            const title = prompt('サブサブセクションタイトルを入力:', '新しいサブサブセクション');
-            if (title) {
-              editor.chain().focus().insertContent({
-                type: 'latexSection',
-                attrs: { level: 3, title },
-                content: [{ type: 'text', text: `\\subsubsection{${title}}` }]
-              }).run();
-            }
-          }}
-          className={editor.isActive('latexSection', { level: 3 }) ? 'bg-gray-200' : ''}
-          size="sm"
-        >
-          Subsubsection
-        </Button>
-        <div className="border-l mx-2 h-6" />
         <Button
           onClick={() => editor.chain().focus().toggleBold().run()}
           className={editor.isActive('bold') ? 'bg-gray-200' : ''}
@@ -107,49 +64,50 @@ export function EditorToolbar({
         <div className="border-l mx-2 h-6" />
         <Button
           onClick={() => {
-            editor.chain().focus().insertContent({
-              type: 'equation',
-              attrs: { content: '\\begin{equation}\n  y = mx + b\n\\end{equation}' },
-              content: [{ type: 'text', text: '\\begin{equation}\n  y = mx + b\n\\end{equation}' }]
-            }).run();
-          }}
-          className={editor.isActive('equation') ? 'bg-gray-200' : ''}
-          size="sm"
-        >
-          Equation
-        </Button>
-        <Button
-          onClick={() => {
-            editor.chain().focus().insertContent({
-              type: 'align',
-              attrs: { content: '\\begin{align}\n  y &= mx + b \\\\\n  &= 2x + 1\n\\end{align}' },
-              content: [{ type: 'text', text: '\\begin{align}\n  y &= mx + b \\\\\n  &= 2x + 1\n\\end{align}' }]
-            }).run();
-          }}
-          className={editor.isActive('align') ? 'bg-gray-200' : ''}
-          size="sm"
-        >
-          Align
-        </Button>
-        <Button
-          onClick={() => {
-            const language = prompt('プログラミング言語を入力:', 'python');
-            if (language) {
-              editor.chain().focus().insertContent({
-                type: 'lstlisting',
-                attrs: { 
-                  language,
-                  content: `\\begin{lstlisting}[language=${language}]\n  # Your code here\n\\end{lstlisting}`
-                },
-                content: [{ type: 'text', text: `\\begin{lstlisting}[language=${language}]\n  # Your code here\n\\end{lstlisting}` }]
-              }).run();
+            const formula = prompt('インライン数式を入力してください:');
+            if (formula) {
+              editor.chain().focus().setMath(formula).run();
             }
           }}
-          className={editor.isActive('lstlisting') ? 'bg-gray-200' : ''}
           size="sm"
         >
-          Code
+          x²
         </Button>
+        <Button
+          onClick={() => {
+            const formula = prompt('数式ブロックを入力してください:');
+            if (formula) {
+              editor.chain().focus().setMath(formula).run();
+            }
+          }}
+          size="sm"
+        >
+          ∑
+        </Button>
+        <div className="border-l mx-2 h-6" />
+        <div className="flex space-x-1">
+          <Button
+            onClick={() => onFontSizeChange('normal')}
+            className={fontSize === 'normal' ? 'bg-gray-200' : ''}
+            size="sm"
+          >
+            A
+          </Button>
+          <Button
+            onClick={() => onFontSizeChange('large')}
+            className={fontSize === 'large' ? 'bg-gray-200' : ''}
+            size="sm"
+          >
+            A+
+          </Button>
+          <Button
+            onClick={() => onFontSizeChange('x-large')}
+            className={fontSize === 'x-large' ? 'bg-gray-200' : ''}
+            size="sm"
+          >
+            A++
+          </Button>
+        </div>
         {(() => {
           const canShowAIButton = onGenerateContent && bookTitle && targetAudience;
           console.log('EditorToolbar: AI button conditions:', {

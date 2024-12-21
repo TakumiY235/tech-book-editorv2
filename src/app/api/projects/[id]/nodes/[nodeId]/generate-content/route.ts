@@ -4,55 +4,40 @@ import { formatSuccessResponse } from '../../../../../_lib/responses/formatRespo
 import { ApiError } from '../../../../../_lib/errors/ApiError';
 import { getRepositories } from '../../../../../../../services/prisma/repositories';
 import { NodeStatus } from '@prisma/client';
-import { AIEditorService } from '../../../../../../../services/ai/base/editorService';
 import { ChapterStructure } from '../../../../../../../types/project';
-
-interface RouteParams {
-  id: string;
-  nodeId: string;
-}
+import { validateNodeContext, validateProjectMetadata } from '../../../../../_lib/validation/serviceValidation';
 
 // コンテンツ生成ハンドラー
-const handleGenerateContent = async (
+async function handleGenerateContent(
   request: NextRequest,
-  { params }: { params: RouteParams }
-) => {
-  const { projectRepository, nodeRepository } = getRepositories();
-  const editorService = new AIEditorService(process.env.ANTHROPIC_API_KEY || '');
-
-  // プロジェクトの存在確認
-  const project = await projectRepository.findById(params.id);
-  if (!project) {
-    throw ApiError.notFound('Project not found');
-  }
-
-  // ノードの存在確認とプロジェクトへの所属確認
-  const node = await nodeRepository.findByIdWithParent(params.nodeId);
+  context: { params: Promise<{ id: string; nodeId: string }> }
+) {
+  // パラメータの検証と必要なコンテキストの取得
+  const params = await context.params;
+  const { project, node, editorService } = await validateNodeContext(params.id, params.nodeId);
+  
   if (!node) {
     throw ApiError.notFound('Node not found');
   }
-  if (node.projectId !== params.id) {
-    throw ApiError.badRequest('Node does not belong to this project');
-  }
+
+  const { nodeRepository } = getRepositories();
+
+  const chapterStructure: ChapterStructure = {
+    id: node.id,
+    type: node.type as 'section' | 'subsection',
+    title: node.title,
+    description: node.description || '',
+    purpose: node.purpose || '',
+    content: node.content || '',
+    should_split: node.should_split ?? false,
+    n_pages: node.n_pages ?? 1,
+    order: node.order ?? 0,
+    parentId: node.parentId || ''
+  };
 
   try {
-    // プロジェクトのメタデータからターゲットオーディエンスを取得
-    const metadata = project.metadata as Record<string, any>;
-    const targetAudience = metadata?.targetAudience || 'general';
-
-    // ChapterStructure型に変換
-    const chapterStructure: ChapterStructure = {
-      id: node.id,
-      title: node.title,
-  if (node.projectId !== params.id) {
-      description: node.description || '',
-      purpose: node.purpose || '',
-      content: node.content || '',
-      should_split: node.should_split,
-      n_pages: node.n_pages,
-      order: node.order,
-      parentId: node.parentId,
-    };
+    // プロジェクトのメタデータを検証
+    const { targetAudience } = validateProjectMetadata(project);
 
     // AIを使用してコンテンツを生成
     const generatedContent = await editorService.generateSectionContent(
@@ -64,16 +49,19 @@ const handleGenerateContent = async (
     );
 
     // 生成されたコンテンツでノードを更新
-    const updatedNode = await nodeRepository.updateContent(params.nodeId, {
+    const updatedNode = await nodeRepository.updateContent(node.id, {
       content: generatedContent,
-      status: NodeStatus.in_progress,
+      status: NodeStatus.in_progress
     });
 
     return formatSuccessResponse(updatedNode);
   } catch (error) {
-    throw ApiError.internal('Failed to generate content');
+    console.error('Content generation error:', error);
+    throw ApiError.internal('Failed to generate content', { 
+      error: error instanceof Error ? error.message : String(error) 
+    });
   }
-};
+}
 
 // エンドポイントハンドラー
 export const POST = withErrorHandling(handleGenerateContent);

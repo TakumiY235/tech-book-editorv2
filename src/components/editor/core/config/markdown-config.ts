@@ -11,7 +11,9 @@ import { gfm } from 'turndown-plugin-gfm'
 import { unified } from 'unified'
 import remarkParse from 'remark-parse'
 import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
 import remarkRehype from 'remark-rehype'
+import rehypeKatex from 'rehype-katex'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeStringify from 'rehype-stringify'
 import remarkStringify from 'remark-stringify'
@@ -70,7 +72,9 @@ export const parseMarkdown = async (content: string): Promise<string> => {
   const file = await unified()
     .use(remarkParse)
     .use(remarkGfm)
+    .use(remarkMath)
     .use(remarkRehype)
+    .use(rehypeKatex)
     .use(rehypeHighlight)
     .use(rehypeStringify)
     .process(content)
@@ -93,7 +97,10 @@ export const renderMarkdownPreview = async (content: string): Promise<string> =>
   const file = await unified()
     .use(remarkParse)
     .use(remarkGfm)
-    .use(remarkStringify)
+    .use(remarkMath)
+    .use(remarkRehype)
+    .use(rehypeKatex)
+    .use(rehypeStringify)
     .process(content)
   
   return String(file)

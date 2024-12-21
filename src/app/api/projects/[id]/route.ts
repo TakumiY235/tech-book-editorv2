@@ -1,11 +1,11 @@
-import { withErrorHandling, withValidation } from '../../middleware';
-import { UpdateProjectRequest } from '../../../../types/api/projects';
-import { updateProjectSchema } from '../../_lib/validation/schemas';
-import { 
-  handleGetProject, 
-  handleUpdateProject, 
-  handleDeleteProject 
-} from '../../_lib/handlers/projectHandlers';
+import { withErrorHandling, withValidation } from '@app/api/middleware';
+import { UpdateProjectRequest } from '@app/api/_lib/types/projects';
+import { updateProjectSchema } from '@app/api/_lib/validation/schemas';
+import {
+  handleGetProject,
+  handleUpdateProject,
+  handleDeleteProject
+} from '@app/api/_lib/handlers/projectHandlers';
 
 // エンドポイントハンドラー
 export const GET = withErrorHandling(handleGetProject);

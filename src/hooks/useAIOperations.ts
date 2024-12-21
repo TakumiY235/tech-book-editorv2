@@ -1,9 +1,12 @@
 'use client';
 
-import { Project, BookNode, BookMetadata } from '@/types/project';
+import { Project, BookNode, BookMetadata } from '../types/project';
 import { useAPI } from './core/useAPI';
 import { handleAIOperationsError } from './core/useErrorHandling';
 
+/**
+ * AIを使用したコンテンツ生成と構造管理のためのフック
+ */
 export function useAIOperations(
   project: Project,
   setProject: (project: Project | ((prev: Project) => Project)) => void,
@@ -11,20 +14,40 @@ export function useAIOperations(
 ) {
   const api = useAPI();
 
-  const generateContent = async (nodeId: string, bookTitle: string, targetAudience: string): Promise<boolean> => {
-    console.log('generateContent called with:', { nodeId, bookTitle, targetAudience });
+  /**
+   * ノードのステータスを更新するヘルパー関数
+   */
+  const updateNodeStatus = (nodeId: string, status: 'generating' | 'completed') => {
+    setProject(prev => ({
+      ...prev,
+      nodes: prev.nodes?.map((node: BookNode) =>
+        node.id === nodeId
+          ? { ...node, status } as BookNode
+          : node
+      ) || []
+    }));
+  };
 
-    const nodes = project.nodes ?? [];
-    const targetNode = nodes.find((n: BookNode) => n.id === nodeId);
-    console.log('Target node for content generation:', targetNode);
-
+  /**
+   * コンテンツ生成関連の操作
+   */
+  const generateContent = async (
+    nodeId: string,
+    bookTitle: string,
+    targetAudience: string
+  ): Promise<boolean> => {
+    const targetNode = project.nodes?.find((n: BookNode) => n.id === nodeId);
     if (!targetNode) {
-      console.error('Target node not found:', nodeId);
       throw new Error('Target node not found');
     }
 
     try {
-      const updatedNode = await api.generateContent(project.id, nodeId, bookTitle, targetAudience);
+      const updatedNode = await api.generateContent(
+        project.id,
+        nodeId,
+        bookTitle,
+        targetAudience
+      );
       
       setProject(prev => ({
         ...prev,
@@ -39,6 +62,9 @@ export function useAIOperations(
     }
   };
 
+  /**
+   * 構造生成関連の操作
+   */
   const generateStructureWithAI = async (metadata: BookMetadata) => {
     try {
       const nodes = await api.generateStructure(project.id, metadata);
@@ -50,7 +76,7 @@ export function useAIOperations(
   };
 
   const refineStructureWithAI = async () => {
-    if (!project.nodes || project.nodes.length === 0) {
+    if (!project.nodes?.length) {
       throw new Error('No existing structure to refine');
     }
 
@@ -64,22 +90,10 @@ export function useAIOperations(
   };
 
   const generateSubsectionStructure = async (nodeId: string): Promise<boolean> => {
-    console.log('generateSubsectionStructure called with:', { nodeId });
-
     try {
-      // 生成中のステータスを設定
-      setProject(prev => ({
-        ...prev,
-        nodes: prev.nodes?.map((node: BookNode) =>
-          node.id === nodeId
-            ? { ...node, status: 'generating' } as BookNode
-            : node
-        ) || []
-      }));
+      updateNodeStatus(nodeId, 'generating');
+      const result = await api.generateSubsections(project.id, nodeId);
 
-      const { subsections } = await api.generateSubsections(project.id, nodeId);
-
-      // 生成完了後、親ノードのステータスを更新
       setProject(prev => {
         const existingNodes = prev.nodes ?? [];
         const completedNodes = existingNodes.map((node: BookNode) =>
@@ -89,7 +103,7 @@ export function useAIOperations(
         );
         return {
           ...prev,
-          nodes: [...completedNodes, ...subsections]
+          nodes: [...completedNodes, ...result.subsections]
         };
       });
       onSuccess();
@@ -101,7 +115,9 @@ export function useAIOperations(
   };
 
   return {
+    // コンテンツ生成
     generateContent,
+    // 構造生成と管理
     generateStructureWithAI,
     refineStructureWithAI,
     generateSubsectionStructure,

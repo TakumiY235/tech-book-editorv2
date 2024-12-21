@@ -1,7 +1,11 @@
 'use client';
 
 import { ChangeEvent } from 'react';
-import { useToast } from '@/components/ui/toast';
+import { useToast } from '../../../components/ui/toast';
+import { Project } from '@/types/project';
+import { useAPI } from '@hooks/core/useAPI';
+import { handleProjectImportError } from '@hooks/core/useErrorHandling';
+
 
 interface YAMLImportProps {
   projectId: string;
@@ -57,4 +61,28 @@ export function YAMLImport({ projectId, onSuccess }: YAMLImportProps) {
       </label>
     </>
   );
+}
+
+
+
+
+
+export function useProjectImport(
+  project: Project,
+  handleNodeCreated: () => Promise<void>
+) {
+  const api = useAPI();
+
+  const importFromYaml = async (file: File) => {
+    try {
+      await api.importFromYaml(project.id, file);
+      handleNodeCreated();
+    } catch (error) {
+      handleProjectImportError.handleYamlImportError(error);
+    }
+  };
+
+  return {
+    importFromYaml,
+  };
 }

@@ -76,7 +76,43 @@ const config = {
         DEFAULT: {
           css: {
             maxWidth: 'none',
+            color: 'var(--tw-prose-body)',
+            lineHeight: '1.75',
+            a: {
+              color: 'var(--tw-prose-links)',
+              textDecoration: 'underline',
+              fontWeight: '500',
+            },
+            strong: {
+              color: 'var(--tw-prose-bold)',
+              fontWeight: '600',
+            },
+            h1: {
+              color: 'var(--tw-prose-headings)',
+              fontWeight: '800',
+              fontSize: '2.25em',
+              marginTop: '0',
+              marginBottom: '0.8888889em',
+              lineHeight: '1.1111111',
+            },
+            h2: {
+              color: 'var(--tw-prose-headings)',
+              fontWeight: '700',
+              fontSize: '1.5em',
+              marginTop: '2em',
+              marginBottom: '1em',
+              lineHeight: '1.3333333',
+            },
+            h3: {
+              color: 'var(--tw-prose-headings)',
+              fontWeight: '600',
+              fontSize: '1.25em',
+              marginTop: '1.6em',
+              marginBottom: '0.6em',
+              lineHeight: '1.6',
+            },
             code: {
+              color: 'var(--tw-prose-code)',
               backgroundColor: 'var(--tw-prose-pre-bg)',
               padding: '0.25rem',
               borderRadius: '0.25rem',
@@ -87,6 +123,45 @@ const config = {
             },
             'code::after': {
               content: '""',
+            },
+            pre: {
+              color: 'var(--tw-prose-pre-code)',
+              backgroundColor: 'var(--tw-prose-pre-bg)',
+              borderRadius: '0.375rem',
+              padding: '1rem',
+              overflowX: 'auto',
+            },
+            blockquote: {
+              fontWeight: '500',
+              fontStyle: 'italic',
+              borderLeftWidth: '0.25rem',
+              borderLeftColor: 'var(--tw-prose-quote-borders)',
+              quotes: '"\\201C""\\201D""\\2018""\\2019"',
+              marginTop: '1.6em',
+              marginBottom: '1.6em',
+              paddingLeft: '1em',
+            },
+            ul: {
+              listStyleType: 'disc',
+              marginTop: '1.25em',
+              marginBottom: '1.25em',
+              paddingLeft: '1.625em',
+            },
+            ol: {
+              listStyleType: 'decimal',
+              marginTop: '1.25em',
+              marginBottom: '1.25em',
+              paddingLeft: '1.625em',
+            },
+            li: {
+              marginTop: '0.5em',
+              marginBottom: '0.5em',
+            },
+            'ul > li': {
+              paddingLeft: '0.375em',
+            },
+            'ol > li': {
+              paddingLeft: '0.375em',
             },
           },
         },

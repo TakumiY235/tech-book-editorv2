@@ -1,4 +1,4 @@
-import { NodeType } from '../../../types/project';
+import { Node } from '../../../types/project';
 
 // Base node interface
 export interface BaseNode {
@@ -6,7 +6,7 @@ export interface BaseNode {
   title: string;
   description: string;
   purpose: string;
-  type: NodeType;
+  type: Node;
   order: number;
   parentId: string | null;
 }
@@ -40,8 +40,31 @@ export enum AIErrorCode {
 }
 
 // Anthropic specific types
+export interface ContentBlock {
+  type: 'text';
+  text: string;
+}
+
+export interface ToolUseBlock {
+  type: 'tool_use';
+  tool_name: string;
+  parameters: Record<string, unknown>;
+}
+
+export type MessageContent = ContentBlock | ToolUseBlock;
+
 export interface AnthropicTextResponse {
-  content: Array<{ type: string; text: string }>;
+  id: string;
+  type: string;
+  role: string;
+  content: MessageContent[];
+  model: string;
+  stop_reason: string | null;
+  stop_sequence: string | null;
+  usage: {
+    input_tokens: number;
+    output_tokens: number;
+  };
 }
 
 // Configuration interface

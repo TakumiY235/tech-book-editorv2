@@ -1,11 +1,15 @@
 'use client';
 
-import { Project } from './types';
+import { Project } from '../types/project';
+import { useAPI } from './core/useAPI';
+import { handleProjectMetadataError } from './core/useErrorHandling';
 
 export function useProjectMetadata(
   project: Project,
-  setProject: (project: Project) => void
+  setProject: (project: Project | ((prev: Project) => Project)) => void
 ) {
+  const api = useAPI();
+
   const handleUpdateProjectMetadata = async (updates: {
     name?: string;
     targetAudience?: string;
@@ -15,29 +19,10 @@ export function useProjectMetadata(
     };
   }) => {
     try {
-      const response = await fetch(`/api/projects/${project.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: updates.name,
-          metadata: {
-            ...(updates.targetAudience && { targetAudience: updates.targetAudience }),
-            ...(updates.metadata?.overview && { overview: updates.metadata.overview }),
-            ...(updates.metadata?.pageCount && { pageCount: updates.metadata.pageCount })
-          }
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update project metadata');
-      }
-
-      const updatedProject = await response.json();
+      const updatedProject = await api.updateProjectMetadata(project.id, updates);
       setProject(updatedProject);
     } catch (error) {
-      console.error('Error updating project metadata:', error);
+      handleProjectMetadataError.handleUpdateError(error);
     }
   };
 

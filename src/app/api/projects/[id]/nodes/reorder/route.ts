@@ -1,124 +1,78 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma/db';
-import type { Node, Prisma } from '@prisma/client';
+import { NextRequest } from 'next/server';
+import { withErrorHandling, withValidation } from '../../../../middleware';
+import { formatSuccessResponse } from '../../../../_lib/responses/formatResponse';
+import { ApiError } from '../../../../_lib/errors/ApiError';
+import { getRepositories } from '../../../../../../services/prisma/repositories';
 
-interface ReorderRequest {
-  nodeId: string;
-  newOrder: number;
-  newParentId: string | null;
+interface ReorderNodesRequest {
+  nodes: Array<{
+    id: string;
+    order: number;
+  }>;
 }
 
-export async function POST(
-  request: NextRequest,
-  context: { params: { id: string } }
-) {
-  try {
-    const params = context.params;
-    const { nodeId, newOrder, newParentId } = (await request.json()) as ReorderRequest;
+const reorderNodesSchema = {
+  validate: (data: any) => {
+    const errors: Record<string, string[]> = {};
 
-    // Get the node to be moved
-    const node = await prisma.node.findUnique({
-      where: { id: nodeId }
-    });
-
-    if (!node) {
-      return NextResponse.json(
-        { error: 'Node not found' },
-        { status: 404 }
-      );
+    if (!Array.isArray(data.nodes)) {
+      errors.nodes = ['Nodes must be an array'];
+      return { success: false, error: errors };
     }
 
-    const oldParentId = node.parentId;
-
-    // If moving to a new parent, validate the parent node
-    if (newParentId && newParentId !== oldParentId) {
-      const parentNode = await prisma.node.findUnique({
-        where: { id: newParentId }
-      });
-
-      if (!parentNode) {
-        return NextResponse.json(
-          { error: 'Parent node not found' },
-          { status: 404 }
-        );
-      }
-
-      if (parentNode.type !== 'section') {
-        return NextResponse.json(
-          { error: 'Parent node must be a section' },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Update orders of other nodes
-    await prisma.$transaction(async (tx) => {
-      // Move nodes up in the old parent's list
-      if (oldParentId) {
-        await tx.node.updateMany({
-          where: {
-            AND: {
-              projectId: params.id,
-              parentId: oldParentId,
-              order: { gt: node.order }
-            }
-          },
-          data: {
-            order: {
-              decrement: 1,
-            },
-          },
-        });
-      }
-
-      // Move nodes down in the new parent's list
-      if (newParentId) {
-        await tx.node.updateMany({
-          where: {
-            AND: {
-              projectId: params.id,
-              parent: { id: newParentId },
-              order: { gte: newOrder }
-            }
-          },
-          data: {
-            order: {
-              increment: 1,
-            },
-          },
-        });
-      }
-
-      // Update the moved node
-      await tx.node.update({
-        where: { id: nodeId },
-        data: {
-          order: newOrder,
-          parent: newParentId ? { connect: { id: newParentId } } : { disconnect: true }
-        },
-      });
-    });
-
-    // Return updated list of nodes
-    const nodes = await prisma.node.findMany({
-      where: {
-        projectId: params.id,
-      },
-      include: {
-        parent: true,
-        children: true
-      },
-      orderBy: {
-        order: 'asc',
-      }
-    });
-
-    return NextResponse.json(nodes);
-  } catch (error) {
-    console.error('Error reordering nodes:', error);
-    return NextResponse.json(
-      { error: 'Failed to reorder nodes' },
-      { status: 500 }
+    const invalidNodes = data.nodes.filter(
+      (node: any) =>
+        typeof node !== 'object' ||
+        typeof node.id !== 'string' ||
+        typeof node.order !== 'number'
     );
+
+    if (invalidNodes.length > 0) {
+      errors.nodes = ['Each node must have an id (string) and order (number)'];
+    }
+
+    return {
+      success: Object.keys(errors).length === 0,
+      error: errors
+    };
   }
-}
+};
+
+// ノード並び替えハンドラー
+const handleReorderNodes = async (
+  request: NextRequest,
+  validatedData: ReorderNodesRequest,
+  { params }: { params: { id: string } }
+) => {
+  const { projectRepository, nodeRepository } = getRepositories();
+
+  // プロジェクトの存在確認
+  const project = await projectRepository.findById(params.id);
+  if (!project) {
+    throw ApiError.notFound('Project not found');
+  }
+
+  // 各ノードの存在確認とプロジェクトへの所属確認
+  const nodes = await Promise.all(
+    validatedData.nodes.map(node => nodeRepository.findById(node.id))
+  );
+
+  const invalidNodes = nodes.filter(
+    (node, index) =>
+      !node || node.projectId !== params.id
+  );
+
+  if (invalidNodes.length > 0) {
+    throw ApiError.badRequest('One or more nodes are invalid or do not belong to this project');
+  }
+
+  // ノードの並び替えを実行
+  await nodeRepository.reorderNodes(validatedData.nodes);
+
+  return formatSuccessResponse({ message: 'Nodes reordered successfully' });
+};
+
+// エンドポイントハンドラー
+export const PUT = withErrorHandling(
+  withValidation<ReorderNodesRequest>(reorderNodesSchema, handleReorderNodes)
+);

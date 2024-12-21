@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import "katex/dist/katex.min.css";
-import CodeHighlighter from "@/components/editor/code-highlighter";
+import CodeHighlighter from "@/components/editor/ui/highlighter/code-highlighter";
+import { ToastProvider } from "@/components/ui/toast/toast-provider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -19,8 +20,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <CodeHighlighter />
-        {children}
+        <ToastProvider>
+          <CodeHighlighter />
+          {children}
+        </ToastProvider>
       </body>
     </html>
   );

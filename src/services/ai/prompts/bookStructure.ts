@@ -1,4 +1,4 @@
-import type { BookMetadata } from '../types';
+import type { BookMetadata } from '@/types/project';
 
 export function generateBookStructurePrompt(metadata: BookMetadata): string {
   return `<Inputs>

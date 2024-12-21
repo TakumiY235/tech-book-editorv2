@@ -1,40 +1,33 @@
 'use client';
 
-import { useState } from 'react';
-import { Project, BookNode } from '@/hooks/types';
+import { Project } from '../types/project';
 import { useNodeOperations } from './useNodeOperations';
 import { useProjectMetadata } from './useProjectMetadata';
 import { useAIOperations } from './useAIOperations';
 import { useProjectImport } from './useProjectImport';
-import { useNodeOrganizer } from './useNodeOrganizer';
+import { useProjectStateManagement } from './core/useStateManagement';
+import { handleProjectEditorError } from './core/useErrorHandling';
 
 export function useProjectEditor(initialProject: Project) {
-  const [project, setProject] = useState<Project>(initialProject);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const {
+    project,
+    selectedNodeId,
+    setSelectedNodeId,
+    setProject,
+    organizedNodes,
+    ...stateManagement
+  } = useProjectStateManagement(initialProject);
 
   const handleNodeCreated = async () => {
     const response = await fetch(`/api/projects/${project.id}`);
-    if (response.ok) {
-      const updatedProject = await response.json();
-      setProject(updatedProject);
-    }
+    const { data } = await handleProjectEditorError.handleFetchError(response, project.id);
+    setProject(data);
   };
 
   const nodeOperations = useNodeOperations(project, setProject, handleNodeCreated);
   const projectMetadata = useProjectMetadata(project, setProject);
-  console.log('useProjectEditor: Initializing with project:', {
-    id: project.id,
-    name: project.name,
-    hasMetadata: !!project.metadata
-  });
-
   const aiOperations = useAIOperations(project, setProject, handleNodeCreated);
-  console.log('useProjectEditor: AI operations initialized:', {
-    hasGenerateContent: !!aiOperations.generateContent,
-    hasGenerateStructureWithAI: !!aiOperations.generateStructureWithAI
-  });
   const projectImport = useProjectImport(project, handleNodeCreated);
-  const nodeOrganizer = useNodeOrganizer(project);
 
   const selectedNode = project.nodes?.find(node => node.id === selectedNodeId);
 
@@ -44,12 +37,13 @@ export function useProjectEditor(initialProject: Project) {
     selectedNodeId,
     setSelectedNodeId,
     handleNodeCreated,
-    organizedNodes: nodeOrganizer.organizedNodes,
+    organizedNodes,
     ...nodeOperations,
     ...projectMetadata,
     ...aiOperations,
     ...projectImport,
+    ...stateManagement
   };
 }
 
-export type { BookNode, Project };
+export type { BookNode, Project } from '../types/project';

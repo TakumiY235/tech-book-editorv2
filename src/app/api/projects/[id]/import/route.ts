@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma/db";
+import { prisma } from "@/services/prisma/db";
 import yaml from "js-yaml";
 import { NodeStatus, NodeType } from "@prisma/client";
 

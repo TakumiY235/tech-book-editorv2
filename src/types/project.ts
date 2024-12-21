@@ -5,7 +5,7 @@ export interface Node {
   description: string;
   purpose: string;
   type: 'section' | 'subsection';
-  status: 'draft' | 'in_progress' | 'review' | 'completed';
+  status: 'draft' | 'in_progress' | 'review' | 'completed' | 'generating';
   order: number;
   parentId: string | null;
   n_pages: number;
@@ -15,7 +15,7 @@ export interface Node {
 export interface Project {
   id: string;
   name: string;
-  nodes: Node[];
+  nodes?: Node[] | null;
   metadata?: {
     targetAudience?: string;
     overview?: string;
@@ -32,4 +32,22 @@ export interface BookMetadata {
   overview: string;
   targetAudience: string;
   pageCount: number;
+}
+
+// Aliases for backward compatibility
+export type BookNode = Node;
+
+export type NodeType = 'section' | 'subsection';
+
+export interface ChapterStructure {
+  id: string;
+  type: NodeType;
+  title: string;
+  description: string;
+  purpose: string;
+  content?: string;
+  order: number;
+  parentId: string | null;
+  n_pages: number;
+  should_split: boolean;
 }

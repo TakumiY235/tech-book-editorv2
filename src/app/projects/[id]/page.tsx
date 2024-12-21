@@ -2,8 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { ProjectEditor } from './project-editor';
-import { Project } from '@/hooks/types';
+import { ProjectLayout } from './project-layout';
+import { Project } from '@/types/project';
 
 export default function ProjectPage() {
   const params = useParams();
@@ -18,7 +18,8 @@ export default function ProjectPage() {
         if (!response.ok) {
           throw new Error('Failed to fetch project');
         }
-        const data = await response.json();
+        const { data } = await response.json();
+        console.log('Fetched project data:', data);
         setProject(data);
       } catch (error) {
         setError('Failed to load project');
@@ -39,7 +40,7 @@ export default function ProjectPage() {
 
   return (
     <div className="h-screen p-4">
-      <ProjectEditor initialProject={project} />
+      <ProjectLayout initialProject={project} />
     </div>
   );
 }

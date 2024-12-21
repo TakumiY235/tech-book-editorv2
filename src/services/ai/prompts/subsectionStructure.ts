@@ -1,4 +1,4 @@
-import type { ChapterStructure } from '../types';
+import type { ChapterStructure } from '@/types/project';
 
 export function generateSubsectionStructurePrompt(
   node: ChapterStructure,

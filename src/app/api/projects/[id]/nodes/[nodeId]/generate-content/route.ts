@@ -1,148 +1,79 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma/db';
-import { Node as PrismaNode } from '@prisma/client';
-import { AIEditorService } from '@/services/ai/editorService';
-import { BookNode } from '@/hooks/types';
+import { NextRequest } from 'next/server';
+import { withErrorHandling } from '../../../../../middleware';
+import { formatSuccessResponse } from '../../../../../_lib/responses/formatResponse';
+import { ApiError } from '../../../../../_lib/errors/ApiError';
+import { getRepositories } from '../../../../../../../services/prisma/repositories';
+import { NodeStatus } from '@prisma/client';
+import { AIEditorService } from '../../../../../../../services/ai/base/editorService';
+import { ChapterStructure } from '../../../../../../../types/project';
 
-// 型定義
-interface GenerateContentRequest {
-  bookTitle: string;
-  targetAudience: string;
+interface RouteParams {
+  id: string;
+  nodeId: string;
 }
 
-// ユーティリティ関数
-function transformNode(dbNode: PrismaNode): BookNode {
-  return {
-    id: dbNode.id,
-    title: dbNode.title,
-    content: dbNode.content || '',
-    description: dbNode.description || '',
-    purpose: dbNode.purpose || '',
-    type: dbNode.type,
-    status: dbNode.status,
-    order: dbNode.order,
-    parentId: dbNode.parentId,
-    n_pages: dbNode.n_pages,
-    should_split: dbNode.should_split,
-  };
-}
-
-// データベース操作関数
-async function getSurroundingNodes(projectId: string, nodeId: string, parentId: string | null) {
-  const [previousNode, nextNode] = await Promise.all([
-    prisma.node.findFirst({
-      where: {
-        projectId,
-        parentId,
-        order: { lt: (await prisma.node.findUnique({ where: { id: nodeId } }))?.order ?? 0 }
-      },
-      orderBy: { order: 'desc' }
-    }),
-    prisma.node.findFirst({
-      where: {
-        projectId,
-        parentId,
-        order: { gt: (await prisma.node.findUnique({ where: { id: nodeId } }))?.order ?? 0 }
-      },
-      orderBy: { order: 'asc' }
-    })
-  ]);
-
-  return {
-    previousNode: previousNode ? transformNode(previousNode) : null,
-    nextNode: nextNode ? transformNode(nextNode) : null
-  };
-}
-
-async function updateNodeContent(nodeId: string, projectId: string, content: string) {
-  return prisma.node.update({
-    where: { id: nodeId, projectId },
-    data: {
-      content,
-      status: 'in_progress',
-    },
-  });
-}
-
-// APIハンドラー
-export async function POST(
+// コンテンツ生成ハンドラー
+const handleGenerateContent = async (
   request: NextRequest,
-  context: { params: { id: string; nodeId: string } }
-) {
+  { params }: { params: RouteParams }
+) => {
+  const { projectRepository, nodeRepository } = getRepositories();
+  const editorService = new AIEditorService(process.env.ANTHROPIC_API_KEY || '');
+
+  // プロジェクトの存在確認
+  const project = await projectRepository.findById(params.id);
+  if (!project) {
+    throw ApiError.notFound('Project not found');
+  }
+
+  // ノードの存在確認とプロジェクトへの所属確認
+  const node = await nodeRepository.findByIdWithParent(params.nodeId);
+  if (!node) {
+    throw ApiError.notFound('Node not found');
+  }
+  if (node.projectId !== params.id) {
+    throw ApiError.badRequest('Node does not belong to this project');
+  }
+
   try {
-    const params = await context.params;
-    const { id, nodeId } = params;
+    // プロジェクトのメタデータからターゲットオーディエンスを取得
+    const metadata = project.metadata as Record<string, any>;
+    const targetAudience = metadata?.targetAudience || 'general';
 
-    // API Key検証
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return NextResponse.json(
-        { error: 'API key is not configured', code: 'CONFIG_ERROR' },
-        { status: 500 }
-      );
-    }
+    // ChapterStructure型に変換
+    const chapterStructure: ChapterStructure = {
+      id: node.id,
+      title: node.title,
+  if (node.projectId !== params.id) {
+      description: node.description || '',
+      purpose: node.purpose || '',
+      content: node.content || '',
+      should_split: node.should_split,
+      n_pages: node.n_pages,
+      order: node.order,
+      parentId: node.parentId,
+    };
 
-    // リクエストボディの検証
-    const { bookTitle, targetAudience }: GenerateContentRequest = await request.json();
-    if (!bookTitle || !targetAudience) {
-      return NextResponse.json(
-        {
-          error: 'Book title and target audience are required',
-          code: 'MISSING_PARAMETERS',
-          details: {
-            bookTitle: !bookTitle ? 'missing' : 'ok',
-            targetAudience: !targetAudience ? 'missing' : 'ok'
-          }
-        },
-        { status: 400 }
-      );
-    }
+    // AIを使用してコンテンツを生成
+    const generatedContent = await editorService.generateSectionContent(
+      project.name,
+      targetAudience,
+      chapterStructure,
+      null, // 前のノード（現在は未実装）
+      null  // 次のノード（現在は未実装）
+    );
 
-    // ノードの取得と検証
-    const node = await prisma.node.findUnique({
-      where: { id: nodeId, projectId: id },
-      include: { project: true },
+    // 生成されたコンテンツでノードを更新
+    const updatedNode = await nodeRepository.updateContent(params.nodeId, {
+      content: generatedContent,
+      status: NodeStatus.in_progress,
     });
 
-    if (!node) {
-      return NextResponse.json(
-        { error: 'Node not found', code: 'NODE_NOT_FOUND' },
-        { status: 404 }
-      );
-    }
-
-    // 周辺ノードの取得
-    const { previousNode, nextNode } = await getSurroundingNodes(id, nodeId, node.parentId);
-
-    // コンテンツ生成
-    const aiService = new AIEditorService(process.env.ANTHROPIC_API_KEY);
-    const generatedContent = await aiService.generateSectionContent(
-      bookTitle,
-      targetAudience,
-      transformNode(node),
-      previousNode,
-      nextNode
-    );
-
-    if (!generatedContent || typeof generatedContent !== 'string') {
-      return NextResponse.json(
-        { error: 'Invalid content generated', code: 'INVALID_CONTENT' },
-        { status: 500 }
-      );
-    }
-
-    // ノードの更新
-    const updatedNode = await updateNodeContent(nodeId, id, generatedContent);
-    return NextResponse.json(transformNode(updatedNode));
-
+    return formatSuccessResponse(updatedNode);
   } catch (error) {
-    console.error('Error:', error);
-    return NextResponse.json(
-      {
-        error: 'An unexpected error occurred',
-        code: 'UNKNOWN_ERROR',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
-      { status: 500 }
-    );
+    throw ApiError.internal('Failed to generate content');
   }
-}
+};
+
+// エンドポイントハンドラー
+export const POST = withErrorHandling(handleGenerateContent);

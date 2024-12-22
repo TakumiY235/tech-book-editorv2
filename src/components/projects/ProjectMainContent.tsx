@@ -2,11 +2,12 @@
 
 import React from 'react';
 import { NodeEditor } from '../editor/Editor';
-import { BookNode, Project } from '@/types/project';
+import { Project } from '../../types/project';
+import { EditorNode } from '../editor/core/types/node-types';
 
 interface ProjectMainContentProps {
   project: Project;
-  selectedNode: BookNode | null | undefined;
+  selectedNode: EditorNode | null | undefined;
   onGenerateContent?: (nodeId: string, bookTitle: string, targetAudience: string) => Promise<boolean>;
 }
 

@@ -1,46 +1,33 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import { Editor } from '@tiptap/react';
-import { saveEditorContent } from '../core/config/editor-config';
 
-export function useAutoSave(
-  editor: Editor | null,
-  projectId: string,
-  nodeId?: string,
-  onSave?: () => void
-) {
-  const saveTimeoutRef = useRef<NodeJS.Timeout>();
+interface UseAutoSaveProps {
+  editor: Editor | null;
+  onSave?: (content: string) => void;
+}
+
+export function useAutoSave({ editor, onSave }: UseAutoSaveProps) {
+  const timeoutRef = useRef<NodeJS.Timeout>();
 
   const handleSave = useCallback(async () => {
-    if (!editor || !nodeId) return false;
+    if (!editor || !onSave) return;
     
-    try {
-      const content = editor.getHTML();
-      const success = await saveEditorContent(content, projectId, nodeId);
-      if (!success) throw new Error('Failed to save content');
-      
-      onSave?.();
-      return true;
-    } catch (error) {
-      return false;
-    }
-  }, [editor, projectId, nodeId, onSave]);
-
-  useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-    };
-  }, []);
+    const content = editor.getHTML();
+    onSave(content);
+  }, [editor, onSave]);
 
   const scheduleAutoSave = useCallback(() => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
     }
-    saveTimeoutRef.current = setTimeout(() => {
+
+    timeoutRef.current = setTimeout(() => {
       handleSave();
-    }, 2000);
+    }, 1000);
   }, [handleSave]);
 
-  return { handleSave, scheduleAutoSave };
+  return {
+    handleSave,
+    scheduleAutoSave
+  };
 }

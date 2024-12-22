@@ -1,19 +1,8 @@
 import { Editor } from '@tiptap/react';
-import { BookNode } from '../../../../types/project';
+import { EditorNode } from './node-types';
 
 export interface NodeEditorHandle {
   getContent: () => string;
-}
-
-export interface NodeEditorProps {
-  initialContent: string;
-  projectId: string;
-  nodeId?: string;
-  onSave?: () => void;
-  bookTitle?: string;
-  targetAudience?: string;
-  onGenerateContent?: ((nodeId: string, bookTitle: string, targetAudience: string) => Promise<boolean>) | undefined;
-  isEditing?: boolean;
 }
 
 export type FontSize = 'normal' | 'large' | 'x-large';
@@ -28,24 +17,6 @@ export interface EditorState {
   fontSize: FontSize;
 }
 
-export interface ContentGenerationProps {
-  nodeId?: string;
-  bookTitle?: string;
-  targetAudience?: string;
-  onGenerateContent?: (nodeId: string, bookTitle: string, targetAudience: string) => Promise<boolean>;
-}
-
-export interface GenerationResult {
-  success: boolean;
-  reason?: {
-    hasNodeId: boolean;
-    hasBookTitle: boolean;
-    hasTargetAudience: boolean;
-    hasOnGenerateContent: boolean;
-  };
-  error?: string;
-}
-
 export interface EditorStateInitialProps {
   content: string;
   fontSize?: FontSize;
@@ -56,7 +27,15 @@ export interface BookMetadata {
   targetAudience: string;
 }
 
-export interface ExtendedNodeEditorProps extends NodeEditorProps {
-  selectedNode?: BookNode | null;
+// Legacy interfaces for backward compatibility
+export interface LegacyNodeEditorProps {
+  projectId: string;
+  nodeId?: string;
+  initialContent: string;
+  selectedNode: EditorNode | null;
+  bookTitle?: string;
+  targetAudience?: string;
+  onGenerateContent?: (nodeId: string, bookTitle: string, targetAudience: string) => Promise<boolean>;
   bookMetadata?: BookMetadata;
+  isEditing?: boolean;
 }

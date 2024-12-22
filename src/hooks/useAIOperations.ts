@@ -33,8 +33,7 @@ export function useAIOperations(
    */
   const generateContent = async (
     nodeId: string,
-    bookTitle: string,
-    targetAudience: string
+    metadata: BookMetadata
   ): Promise<boolean> => {
     const targetNode = project.nodes?.find((n: BookNode) => n.id === nodeId);
     if (!targetNode) {
@@ -45,8 +44,7 @@ export function useAIOperations(
       const updatedNode = await api.generateContent(
         project.id,
         nodeId,
-        bookTitle,
-        targetAudience
+        metadata
       );
       
       setProject(prev => ({

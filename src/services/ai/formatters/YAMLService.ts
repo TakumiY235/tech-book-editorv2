@@ -1,9 +1,9 @@
 import * as yaml from 'js-yaml';
-import { ChapterStructure } from '../../../types/project';
+import { OrganizedNode } from '../../../types/project';
 import { AIServiceError } from '../errors/AIServiceError';
 
 export class YAMLService {
-  parseAndValidateYaml(content: string): ChapterStructure[] {
+  parseAndValidateYaml(content: string): OrganizedNode[] {
     console.log('📄 YAML Parse Start:', {
       contentLength: content.length,
       firstLine: content.split('\n')[0]
@@ -32,12 +32,12 @@ export class YAMLService {
     }
   }
 
-  private validateAndTransformStructure(nodes: any[]): ChapterStructure[] {
+  private validateAndTransformStructure(nodes: any[]): OrganizedNode[] {
     console.log('🔍 Starting structure validation for', nodes.length, 'nodes');
     return nodes.map((node, index) => this.validateAndTransformNode(node, index));
   }
 
-  private validateAndTransformNode(node: any, index: number): ChapterStructure {
+  private validateAndTransformNode(node: any, index: number): OrganizedNode {
     console.log(`🔍 Validating node ${index}:`, {
       id: node.id,
       title: node.title
@@ -54,7 +54,8 @@ export class YAMLService {
       order: typeof node.order === 'number' ? node.order : index,
       parentId: node.parentId ?? null,
       n_pages: node.n_pages,
-      should_split: Boolean(node.should_split)
+      should_split: Boolean(node.should_split),
+      children: node.children ? this.validateAndTransformStructure(node.children) : []
     };
 
     console.log(`✅ Node ${index} validated successfully`);

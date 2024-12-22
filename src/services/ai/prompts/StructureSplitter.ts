@@ -1,9 +1,9 @@
-import type { ChapterStructure } from '@/types/project';
+import type { Node } from '../../../types/project';
 
 export function generateSubsectionStructurePrompt(
-  node: ChapterStructure,
-  parentNodes: ChapterStructure[],
-  siblingNodes: ChapterStructure[]
+  node: Node,
+  parentNodes: Node[],
+  siblingNodes: Node[]
 ): string {
   // 親階層のコンテキストを構築（存在する場合のみ）
   const parentContext = parentNodes.length > 0
@@ -15,30 +15,17 @@ ${index + 1}. ${parent.title}
         .join('\n')
     : '親階層のノードはありません';
 
-  // 同じ階層のノードのコンテキストを構築（存在する場合のみ）
-  const siblingContext = siblingNodes.length > 0
-    ? siblingNodes
-        .map((sibling, index) => `
-${index + 1}. ${sibling.title}
-   説明: ${sibling.description}
-   目的: ${sibling.purpose}
-   ページ数: ${sibling.n_pages}`)
-        .join('\n')
-    : '同階層の他のノードはありません';
-
   return `<Inputs>
-親階層のコンテキスト:
-${parentContext}
 
-同階層の他のノード情報:
-${siblingContext}
-
-分節化する章の情報:
+  分節化する章の情報:
+${node.id} - 章のID
 ${node.title} - タイトル
 ${node.description} - 章の説明
 ${node.purpose} - 章の目的
 ${node.n_pages} - 章のページ数
-${node.id} - 章のID
+
+親階層のコンテキスト:
+${parentContext}
 </Inputs>
 <Instructions>
 あなたは出版業界で10年以上の経験を持つベテラン編集者としての専門知識を有するAIアシスタントです。以下の章を適切な粒度の節に分割します：
@@ -48,10 +35,8 @@ ${node.id} - 章のID
 親階層のコンテキスト：
 ${parentContext}
 
-同階層の他のノード：
-${siblingContext}
-
 分節化対象の章：
+id: ${node.id}
 タイトル: ${node.title}
 説明: ${node.description || '説明なし'}
 目的: ${node.purpose || '目的なし'}
@@ -130,7 +115,6 @@ ${node.n_pages}ページを適切に配分
 論理的な順序で配置
 内容の依存関係を考慮
 均等なページ配分を心がける
-
 
 
 品質チェック項目：

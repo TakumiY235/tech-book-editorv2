@@ -1,4 +1,4 @@
-import { BookMetadata, ChapterStructure } from '../../types/project';
+import { BookMetadata, Node, OrganizedNode } from '../../types/project';
 import { AIServiceConfig } from './types';
 import { AIServiceError } from './errors/AIServiceError';
 import { YAMLService } from './formatters/YAMLService';
@@ -34,7 +34,7 @@ export class AIEditorService {
     this.formatter = new ContentFormatter();
   }
 
-  async generateChapterStructure(metadata: BookMetadata): Promise<ChapterStructure[]> {
+  async generateChapterStructure(metadata: BookMetadata): Promise<OrganizedNode[]> {
     try {
       this.validator.validateBookMetadata(metadata);
 
@@ -52,7 +52,7 @@ export class AIEditorService {
     }
   }
 
-  async refineChapterStructure(existingNodes: ChapterStructure[]): Promise<ChapterStructure[]> {
+  async refineChapterStructure(existingNodes: OrganizedNode[]): Promise<OrganizedNode[]> {
     try {
       const yamlContent = await this.client.makeRequest(
         generateRefineStructurePrompt(existingNodes)
@@ -81,9 +81,9 @@ export class AIEditorService {
   async generateSectionContent(
     bookTitle: string,
     targetAudience: string,
-    node: ChapterStructure,
-    previousNode: ChapterStructure | null,
-    nextNode: ChapterStructure | null
+    node: Node,
+    previousNode: Node | null,
+    nextNode: Node | null
   ): Promise<string> {
     try {
       this.validator.validateContentGenerationInputs(bookTitle, targetAudience, node);
@@ -104,10 +104,10 @@ export class AIEditorService {
   }
 
   async generateNodeSubsections(
-    node: ChapterStructure,
-    parentNodes: ChapterStructure[],
-    siblings: ChapterStructure[]
-  ): Promise<ChapterStructure[]> {
+    node: OrganizedNode,
+    parentNodes: OrganizedNode[],
+    siblings: OrganizedNode[]
+  ): Promise<OrganizedNode[]> {
     try {
       const yamlContent = await this.client.makeRequest(
         generateSubsectionStructurePrompt(node, parentNodes, siblings)
@@ -123,8 +123,8 @@ export class AIEditorService {
     }
   }
 
-  private async processNodeSplitting(nodes: ChapterStructure[]): Promise<ChapterStructure[]> {
-    const result: ChapterStructure[] = [];
+  private async processNodeSplitting(nodes: OrganizedNode[]): Promise<OrganizedNode[]> {
+    const result: OrganizedNode[] = [];
     const nodesToProcess = [...nodes];
 
     while (nodesToProcess.length > 0) {
@@ -133,15 +133,21 @@ export class AIEditorService {
       if (node.should_split) {
         try {
           const subsections = await this.generateNodeSubsections(node, [], []);
-          result.push({ ...node, should_split: false });
-          const processedSubsections = await this.processNodeSplitting(subsections);
-          result.push(...processedSubsections);
+          // 分割されたノードを子ノードとして追加
+          const processedSubsections = await this.processNodeSplitting(
+            subsections.map(sub => ({ ...sub, children: [] }))
+          );
+          result.push({
+            ...node,
+            should_split: false,
+            children: processedSubsections
+          });
         } catch (error) {
           console.error(`Failed to split node ${node.id}:`, error);
-          result.push(node);
+          result.push({ ...node, children: [] });
         }
       } else {
-        result.push(node);
+        result.push({ ...node, children: [] });
       }
     }
 

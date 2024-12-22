@@ -3,9 +3,26 @@ import { withErrorHandling } from '../../../../../middleware';
 import { formatSuccessResponse } from '../../../../../_lib/responses/formatResponse';
 import { ApiError } from '../../../../../_lib/errors/ApiError';
 import { getRepositories } from '../../../../../../../services/prisma/repositories';
-import { NodeStatus } from '@prisma/client';
-import { ChapterStructure } from '../../../../../../../types/project';
+import { NodeStatus, Node as PrismaNode } from '@prisma/client';
+import { Node } from '../../../../../../../types/project';
 import { validateNodeContext, validateProjectMetadata } from '../../../../../_lib/validation/serviceValidation';
+
+// Prisma Node型をカスタムNode型に変換する関数
+function convertPrismaNodeToNode(prismaNode: PrismaNode): Node {
+  return {
+    id: prismaNode.id,
+    title: prismaNode.title,
+    type: prismaNode.type,
+    description: prismaNode.description || '',
+    purpose: prismaNode.purpose || '',
+    content: prismaNode.content || undefined,
+    status: prismaNode.status,
+    should_split: prismaNode.should_split,
+    n_pages: prismaNode.n_pages,
+    order: prismaNode.order,
+    parentId: prismaNode.parentId,
+  };
+}
 
 // コンテンツ生成ハンドラー
 async function handleGenerateContent(
@@ -22,28 +39,18 @@ async function handleGenerateContent(
 
   const { nodeRepository } = getRepositories();
 
-  const chapterStructure: ChapterStructure = {
-    id: node.id,
-    type: node.type as 'section' | 'subsection',
-    title: node.title,
-    description: node.description || '',
-    purpose: node.purpose || '',
-    content: node.content || '',
-    should_split: node.should_split ?? false,
-    n_pages: node.n_pages ?? 1,
-    order: node.order ?? 0,
-    parentId: node.parentId || ''
-  };
-
   try {
     // プロジェクトのメタデータを検証
     const { targetAudience } = validateProjectMetadata(project);
+
+    // Prisma Node型をカスタムNode型に変換
+    const convertedNode = convertPrismaNodeToNode(node);
 
     // AIを使用してコンテンツを生成
     const generatedContent = await editorService.generateSectionContent(
       project.name,
       targetAudience,
-      chapterStructure,
+      convertedNode,
       null, // 前のノード（現在は未実装）
       null  // 次のノード（現在は未実装）
     );

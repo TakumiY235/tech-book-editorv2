@@ -3,8 +3,13 @@ import { BaseRepository } from './base/BaseRepository';
 
 type NodeDelegate = PrismaClient['node'];
 
+interface RecursiveNode extends Node {
+  children: RecursiveNode[];
+}
+
 type NodeWithChildren = Node & {
   children: Node[];
+  parent?: Node | null;
 };
 
 type NodeWithParent = Node & {
@@ -16,7 +21,7 @@ export class NodeRepository extends BaseRepository<Node, NodeDelegate> {
     return this.prisma.node;
   }
 
-  async findByProjectId(projectId: string): Promise<NodeWithChildren[]> {
+  async findByProjectId(projectId: string): Promise<RecursiveNode[]> {
     const delegate = this.getDelegate();
     return delegate.findMany({
       where: { projectId },
@@ -28,6 +33,20 @@ export class NodeRepository extends BaseRepository<Node, NodeDelegate> {
           orderBy: {
             order: 'asc',
           },
+          include: {
+            children: {
+              orderBy: {
+                order: 'asc',
+              },
+              include: {
+                children: {
+                  orderBy: {
+                    order: 'asc',
+                  }
+                }
+              }
+            }
+          }
         },
       },
     });
@@ -41,7 +60,7 @@ export class NodeRepository extends BaseRepository<Node, NodeDelegate> {
     description?: string;
     purpose?: string;
     order: number;
-  }): Promise<NodeWithChildren> {
+  }): Promise<RecursiveNode> {
     const delegate = this.getDelegate();
     return delegate.create({
       data: {

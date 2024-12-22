@@ -5,11 +5,7 @@ import { BookMetadata, BookNode, Node, Project } from '../../types/project';
 // Types
 type ProjectMetadataUpdates = {
   name?: string;
-  targetAudience?: string;
-  metadata?: {
-    overview?: string;
-    pageCount?: number;
-  };
+  metadata?: Partial<BookMetadata>;
 };
 
 type NodeType = BookNode['type'];
@@ -61,15 +57,17 @@ export function useAPI() {
     generateContent: async (
       projectId: string,
       nodeId: string,
-      bookTitle: string,
-      targetAudience: string
+      metadata: BookMetadata
     ): Promise<BookNode> => {
       return fetchWithError(
         API_ENDPOINTS.generateContent(projectId, nodeId),
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ bookTitle, targetAudience }),
+          body: JSON.stringify({
+            bookTitle: metadata.title,
+            targetAudience: metadata.targetAudience
+          }),
         },
         'Failed to generate content'
       );
@@ -196,15 +194,11 @@ export function useAPI() {
       return fetchWithError(
         API_ENDPOINTS.project(projectId),
         {
-          method: 'PATCH',
+          method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name: updates.name,
-            metadata: {
-              ...(updates.targetAudience && { targetAudience: updates.targetAudience }),
-              ...(updates.metadata?.overview && { overview: updates.metadata.overview }),
-              ...(updates.metadata?.pageCount && { pageCount: updates.metadata.pageCount })
-            }
+            metadata: updates.metadata
           }),
         },
         'Failed to update project metadata'

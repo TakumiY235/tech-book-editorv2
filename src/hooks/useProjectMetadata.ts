@@ -1,6 +1,6 @@
 'use client';
 
-import { Project } from '../types/project';
+import { Project, BookMetadata } from '../types/project';
 import { useAPI } from './core/useAPI';
 import { handleProjectMetadataError } from './core/useErrorHandling';
 
@@ -12,11 +12,7 @@ export function useProjectMetadata(
 
   const handleUpdateProjectMetadata = async (updates: {
     name?: string;
-    targetAudience?: string;
-    metadata?: {
-      overview?: string;
-      pageCount?: number;
-    };
+    metadata?: Partial<BookMetadata>;
   }) => {
     try {
       const updatedProject = await api.updateProjectMetadata(project.id, updates);

@@ -1,17 +1,19 @@
+import { BookMetadata } from '../../../../types/project';
+
 export interface CreateProjectRequest {
   name: string;
 }
 
 export interface UpdateProjectRequest {
   name?: string;
-  metadata?: Record<string, any>;
+  metadata?: BookMetadata;
 }
 
 export interface ProjectResponse {
   id: string;
   name: string;
   userId: string;
-  metadata: Record<string, any>;
+  metadata: BookMetadata;
   createdAt: string;
   updatedAt: string;
   user?: {

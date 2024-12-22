@@ -3,11 +3,11 @@ import { NodeStatus, NodeType } from '@prisma/client';
 export interface Node {
   id: string;
   title: string;
-  content: string;
+  content?: string;
   description: string;
   purpose: string;
   type: NodeType;
-  status: NodeStatus;
+  status?: NodeStatus;
   order: number;
   parentId: string | null;
   n_pages: number;
@@ -18,11 +18,7 @@ export interface Project {
   id: string;
   name: string;
   nodes?: Node[] | null;
-  metadata?: {
-    targetAudience?: string;
-    overview?: string;
-    pageCount?: number;
-  };
+  metadata?: BookMetadata;
 }
 
 export interface OrganizedNode extends Node {
@@ -37,6 +33,7 @@ export interface BookMetadata {
 }
 
 export interface NodeCreateInput {
+  id?: string;
   projectId: string;
   parentId?: string;
   type: NodeType;
@@ -58,15 +55,4 @@ export interface GenerateStructureOptions {
 // Aliases for backward compatibility
 export type BookNode = Node;
 
-export interface ChapterStructure {
-  id: string;
-  type: NodeType;
-  title: string;
-  description: string;
-  purpose: string;
-  content?: string;
-  order: number;
-  parentId: string | null;
-  n_pages: number;
-  should_split: boolean;
-}
+// ChapterStructure型はNode型に統合されました

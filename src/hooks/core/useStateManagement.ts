@@ -4,14 +4,12 @@ import { useState, useRef, Dispatch, SetStateAction } from 'react';
 import { Project, BookNode, Node, OrganizedNode } from '../../types/project';
 import { EditorState, FontSize } from '../../components/editor/core/types/editor-types';
 
+import { BookMetadata } from '../../types/project';
+
 // Types
 type ProjectMetadataUpdates = {
   name?: string;
-  targetAudience?: string;
-  metadata?: {
-    overview?: string;
-    pageCount?: number;
-  };
+  metadata?: Partial<BookMetadata>;
 };
 
 type NodeStatus = 'generating' | 'completed';
@@ -55,14 +53,17 @@ export function useProjectStateManagement(initialProject: Project) {
 
   // Metadata Management
   const updateProjectMetadata = (updates: ProjectMetadataUpdates) => {
-    setProject(prev => ({
-      ...prev,
-      ...updates,
-      metadata: {
-        ...prev.metadata,
-        ...updates.metadata
-      }
-    }));
+    setProject(prev => {
+      const currentMetadata = prev.metadata || {} as BookMetadata;
+      return {
+        ...prev,
+        name: updates.name || prev.name,
+        metadata: updates.metadata ? {
+          ...currentMetadata,
+          ...updates.metadata
+        } : currentMetadata
+      };
+    });
   };
 
   // Node Management Functions
@@ -123,36 +124,30 @@ export function useProjectStateManagement(initialProject: Project) {
   const organizeNodes = (nodes?: BookNode[] | null): OrganizedNode[] => {
     if (!nodes || !nodes.length) return [];
 
-    // Initialize maps
-    const nodeMap = new Map<string, BookNode>();
-    const childrenMap = new Map<string, OrganizedNode[]>();
+    // Initialize node map
+    const nodeMap = new Map<string, OrganizedNode>();
     nodes.forEach(node => {
-      nodeMap.set(node.id, node);
-      childrenMap.set(node.id, []);
+      nodeMap.set(node.id, { ...node, children: [] });
     });
 
     // Build node hierarchy
     const rootNodes: OrganizedNode[] = [];
     nodes.forEach(node => {
-      const organizedNode: OrganizedNode = {
-        ...node,
-        children: childrenMap.get(node.id) || []
-      };
-
-      if (node.parentId) {
-        const parentChildren = childrenMap.get(node.parentId);
-        if (parentChildren) {
-          parentChildren.push(organizedNode);
-          childrenMap.set(node.parentId, parentChildren);
-        }
+      const organizedNode = nodeMap.get(node.id)!;
+      
+      if (node.parentId && nodeMap.has(node.parentId)) {
+        // Add as child to parent node
+        const parentNode = nodeMap.get(node.parentId)!;
+        parentNode.children.push(organizedNode);
       } else {
+        // Add to root nodes if no parent or parent not found
         rootNodes.push(organizedNode);
       }
     });
 
     // Sort nodes
     const sortByOrder = (a: BookNode, b: BookNode) => a.order - b.order;
-    childrenMap.forEach(children => children.sort(sortByOrder));
+    nodeMap.forEach(node => node.children.sort(sortByOrder));
     rootNodes.sort(sortByOrder);
 
     return rootNodes;

@@ -1,16 +1,17 @@
 'use client';
 
-import React, { useState, ChangeEvent } from 'react';
-import { Input } from '@/components/ui/input';
-import { Project } from '@/types/project';
+import React, { useState, useEffect, ChangeEvent } from 'react';
+import { Input } from '../../../ui/input';
+import { Project } from '../../../../types/project';
 
 interface ProjectMetadataEditorProps {
   project: Project;
-  onUpdateMetadata: (metadata: {
-    name: string;
-    targetAudience: string;
-    metadata: {
+  onUpdateMetadata: (updates: {
+    name?: string;
+    metadata?: {
+      title: string;
       overview: string;
+      targetAudience: string;
       pageCount: number;
     };
   }) => void;
@@ -18,17 +19,33 @@ interface ProjectMetadataEditorProps {
 
 export function ProjectMetadataEditor({ project, onUpdateMetadata }: ProjectMetadataEditorProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [editedTitle, setEditedTitle] = useState(project.name);
+  const [editedTitle, setEditedTitle] = useState(project.metadata?.title || project.name);
   const [editedTargetAudience, setEditedTargetAudience] = useState(project.metadata?.targetAudience || '');
   const [editedOverview, setEditedOverview] = useState(project.metadata?.overview || '');
   const [editedPageCount, setEditedPageCount] = useState(project.metadata?.pageCount || 0);
 
+  // Ensure metadata is properly initialized
+  useEffect(() => {
+    if (!project.metadata) {
+      onUpdateMetadata({
+        name: project.name,
+        metadata: {
+          title: project.name,
+          overview: '',
+          targetAudience: '',
+          pageCount: 0
+        }
+      });
+    }
+  }, [project.metadata, project.name]);
+
   const handleSaveMetadata = () => {
     onUpdateMetadata({
       name: editedTitle,
-      targetAudience: editedTargetAudience,
       metadata: {
+        title: editedTitle,
         overview: editedOverview,
+        targetAudience: editedTargetAudience,
         pageCount: editedPageCount
       }
     });

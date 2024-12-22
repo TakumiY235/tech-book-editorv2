@@ -5,7 +5,7 @@ import { formatSuccessResponse } from '../responses/formatResponse';
 import { validateNodeContext, validateProjectMetadata } from '../validation/serviceValidation';
 import { getRepositories } from '../../../../services/prisma/repositories';
 import { prisma } from '../../../../services/prisma/db';
-import { NodeCreateInput, GenerateStructureOptions, BookMetadata } from '../../../../types/project';
+import { NodeCreateInput, GenerateStructureOptions, BookMetadata, OrganizedNode } from '../../../../types/project';
 
 /**
  * 構造生成の共通ハンドラー
@@ -90,10 +90,10 @@ export const handleGenerateStructure = async (
 async function createNodesFromStructure(
   projectId: string,
   nodeRepository: any,
-  structures: any[],
+  structures: OrganizedNode[],
   parentId?: string,
   nodeMap = new Map()
-): Promise<any[]> {
+): Promise<Node[]> {
   try {
     const nodes = [];
     let order = 0;
@@ -105,6 +105,7 @@ async function createNodesFromStructure(
       }
 
       const nodeData: NodeCreateInput = {
+        id: structure.id,
         title: structure.title,
         type: structure.type,
         projectId: projectId,

@@ -36,6 +36,32 @@ export const createProjectSchema = {
   }
 };
 
+const validateBookMetadata = (metadata: any): string[] => {
+  if (!metadata || typeof metadata !== 'object') {
+    return ['Metadata must be an object'];
+  }
+
+  const errors: string[] = [];
+  
+  if (metadata.title !== undefined && typeof metadata.title !== 'string') {
+    errors.push('Title must be a string');
+  }
+  
+  if (metadata.overview !== undefined && typeof metadata.overview !== 'string') {
+    errors.push('Overview must be a string');
+  }
+  
+  if (metadata.targetAudience !== undefined && typeof metadata.targetAudience !== 'string') {
+    errors.push('Target audience must be a string');
+  }
+  
+  if (metadata.pageCount !== undefined && typeof metadata.pageCount !== 'number') {
+    errors.push('Page count must be a number');
+  }
+
+  return errors;
+};
+
 export const updateProjectSchema = {
   validate: (data: any) => {
     const errors: Record<string, string[]> = {};
@@ -43,8 +69,10 @@ export const updateProjectSchema = {
     const nameErrors = validateOptionalStringField(data.name, 'Project name');
     if (nameErrors.length) errors.name = nameErrors;
 
-    const metadataErrors = validateObjectField(data.metadata, 'Metadata');
-    if (metadataErrors.length) errors.metadata = metadataErrors;
+    if (data.metadata) {
+      const metadataErrors = validateBookMetadata(data.metadata);
+      if (metadataErrors.length) errors.metadata = metadataErrors;
+    }
 
     return {
       success: Object.keys(errors).length === 0,

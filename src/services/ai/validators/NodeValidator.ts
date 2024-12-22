@@ -1,8 +1,8 @@
-import { ChapterStructure, BookMetadata } from '../../../types/project';
+import { Node, BookMetadata } from '../../../types/project';
 import { AIServiceError } from '../errors/AIServiceError';
 
 export class NodeValidator {
-  validateSubsections(subsections: ChapterStructure[], parentId: string): void {
+  validateSubsections(subsections: Node[], parentId: string): void {
     subsections.forEach(subsection => {
       if (subsection.type !== 'subsection') {
         throw AIServiceError.validation(
@@ -43,7 +43,7 @@ export class NodeValidator {
   validateContentGenerationInputs(
     bookTitle: string,
     targetAudience: string,
-    node: ChapterStructure
+    node: Node
   ): void {
     if (!bookTitle?.trim()) {
       throw AIServiceError.validation('Book title cannot be empty');

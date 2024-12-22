@@ -3,10 +3,32 @@ import { withErrorHandling } from '../../../../../middleware';
 import { formatSuccessResponse } from '../../../../../_lib/responses/formatResponse';
 import { ApiError } from '../../../../../_lib/errors/ApiError';
 import { getRepositories } from '../../../../../../../services/prisma/repositories';
-import { NodeType, Node } from '@prisma/client';
-import { ChapterStructure } from '../../../../../../../types/project';
+import { NodeType, Node as PrismaNode } from '@prisma/client';
+import { Node, OrganizedNode, NodeCreateInput } from '../../../../../../../types/project';
 import { validateNodeContext } from '../../../../../_lib/validation/serviceValidation';
 import { NodeRepository } from '../../../../../../../services/prisma/repositories/NodeRepository';
+
+// Prisma Node型をカスタムNode型に変換する関数
+function convertPrismaNodeToNode(prismaNode: PrismaNode): OrganizedNode {
+  const node: Node = {
+    id: prismaNode.id,
+    title: prismaNode.title,
+    type: prismaNode.type,
+    description: prismaNode.description || '',
+    purpose: prismaNode.purpose || '',
+    content: prismaNode.content || undefined,
+    status: prismaNode.status,
+    should_split: prismaNode.should_split,
+    n_pages: prismaNode.n_pages,
+    order: prismaNode.order,
+    parentId: prismaNode.parentId,
+  };
+
+  return {
+    ...node,
+    children: [],
+  };
+}
 
 // サブセクション生成ハンドラー
 const handleGenerateSubsections = async (
@@ -30,7 +52,7 @@ const handleGenerateSubsections = async (
     // 同階層のノードを取得
     const siblings = await nodeRepository.findMany({
       where: {
-        projectId: params.id,
+        projectId: project.id,
         parentId: node.parentId,
       },
       orderBy: {
@@ -38,57 +60,22 @@ const handleGenerateSubsections = async (
       },
     });
 
-    // ChapterStructure型に変換
-    const parentChapterStructure: ChapterStructure = {
-      id: node.id,
-      title: node.title,
-      type: node.type,
-      description: node.description || '',
-      purpose: node.purpose || '',
-      content: node.content || '',
-      should_split: node.should_split,
-      n_pages: node.n_pages,
-      order: node.order,
-      parentId: node.parentId,
-    };
-
-    const parentChapters = parentNodes.map((node: Node) => ({
-      id: node.id,
-      title: node.title,
-      type: node.type,
-      description: node.description || '',
-      purpose: node.purpose || '',
-      content: node.content || '',
-      should_split: node.should_split,
-      n_pages: node.n_pages,
-      order: node.order,
-      parentId: node.parentId,
-    }));
-
-    const siblingChapters = siblings.map((node: Node) => ({
-      id: node.id,
-      title: node.title,
-      type: node.type,
-      description: node.description || '',
-      purpose: node.purpose || '',
-      content: node.content || '',
-      should_split: node.should_split,
-      n_pages: node.n_pages,
-      order: node.order,
-      parentId: node.parentId,
-    }));
+    // Prisma Node型をカスタムNode型に変換
+    const convertedNode = convertPrismaNodeToNode(node);
+    const convertedParentNodes = parentNodes.map(convertPrismaNodeToNode);
+    const convertedSiblings = siblings.map(convertPrismaNodeToNode);
 
     // AIを使用してサブセクションを生成
     const subsections = await editorService.generateNodeSubsections(
-      parentChapterStructure,
-      parentChapters,
-      siblingChapters
+      convertedNode,
+      convertedParentNodes,
+      convertedSiblings
     );
 
     // 生成されたサブセクションを保存
     const createdNodes = await Promise.all(
-      subsections.map((subsection: { title: string; description: string; purpose: string }, index: number) =>
-        nodeRepository.createNode({
+      subsections.map((subsection: OrganizedNode, index: number) => {
+        const nodeInput: NodeCreateInput = {
           projectId: params.id,
           parentId: node.id,
           type: NodeType.subsection,
@@ -96,8 +83,18 @@ const handleGenerateSubsections = async (
           description: subsection.description,
           purpose: subsection.purpose,
           order: index,
-        })
-      )
+        };
+        
+        if (typeof subsection.n_pages === 'number') {
+          nodeInput.n_pages = subsection.n_pages;
+        }
+        
+        if (typeof subsection.should_split === 'boolean') {
+          nodeInput.should_split = subsection.should_split;
+        }
+        
+        return nodeRepository.createNode(nodeInput);
+      })
     );
 
     return formatSuccessResponse({
@@ -109,8 +106,8 @@ const handleGenerateSubsections = async (
 };
 
 // 親ノードの階層構造を再帰的に取得する補助関数
-async function getParentHierarchy(nodeRepository: NodeRepository, node: Node) {
-  const parents: Node[] = [];
+async function getParentHierarchy(nodeRepository: NodeRepository, node: PrismaNode) {
+  const parents: PrismaNode[] = [];
   let currentNode = node;
 
   while (currentNode.parentId) {

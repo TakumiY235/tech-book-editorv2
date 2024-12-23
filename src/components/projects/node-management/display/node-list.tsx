@@ -93,32 +93,8 @@ export function NodeList({
   onCreateSubsection,
   onGenerateSubsections,
 }: NodeListProps) {
-  const organizeNodesHierarchically = (nodes: OrganizedNode[]): OrganizedNode[] => {
-    // ノードをIDでマップ化
-    const nodeMap = new Map<string, OrganizedNode>();
-    nodes.forEach(node => {
-      nodeMap.set(node.id, { ...node, children: [] });
-    });
-
-    // 親子関係を構築
-    const rootNodes: OrganizedNode[] = [];
-    nodes.forEach(node => {
-      const organizedNode = nodeMap.get(node.id)!;
-      
-      // parentIdがある場合は親ノードの子として追加
-      if (node.parentId && nodeMap.has(node.parentId)) {
-        const parentNode = nodeMap.get(node.parentId)!;
-        parentNode.children.push(organizedNode);
-      } else {
-        // parentIdがない、または親ノードが見つからない場合はルートノードとして扱う
-        rootNodes.push(organizedNode);
-      }
-    });
-
-    return rootNodes;
-  };
-
-  const hierarchicalNodes = organizeNodesHierarchically(organizedNodes);
+  // organizedNodesはすでに階層構造化されているため、直接使用
+  const hierarchicalNodes = organizedNodes;
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>

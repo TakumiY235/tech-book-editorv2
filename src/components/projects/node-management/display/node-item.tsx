@@ -3,10 +3,10 @@
 import React from 'react';
 import { Draggable } from 'react-beautiful-dnd';
 import { Button } from '@/components/ui/button';
-import { BookNode } from '@/types/project';
+import { OrganizedNode } from '@/types/project';
 
 interface NodeItemProps {
-  node: BookNode;
+  node: OrganizedNode;
   index: number;
   parentIndex?: string;
   selectedNodeId: string | null;
@@ -62,7 +62,7 @@ export function NodeItem({
                       <Button
                         size="sm"
                         variant="ghost"
-                        onClick={(e) => {
+                        onClick={(e: React.MouseEvent) => {
                           e.stopPropagation();
                           onCreateSubsection(node.id);
                         }}
@@ -74,7 +74,7 @@ export function NodeItem({
                           size="sm"
                           variant="ghost"
                           className="text-blue-600 hover:text-blue-800 flex items-center gap-2"
-                          onClick={(e) => {
+                          onClick={(e: React.MouseEvent) => {
                             e.stopPropagation();
                             onGenerateSubsections(node.id);
                           }}
@@ -95,7 +95,7 @@ export function NodeItem({
                     size="sm"
                     variant="ghost"
                     className="text-red-600 hover:text-red-800"
-                    onClick={(e) => onDelete(node.id, e)}
+                    onClick={(e: React.MouseEvent) => onDelete(node.id, e)}
                   >
                     Delete
                   </Button>

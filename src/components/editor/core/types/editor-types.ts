@@ -1,5 +1,5 @@
 import { Editor } from '@tiptap/react';
-import { EditorNode } from './node-types';
+import { Node } from '../../../../types/project';
 
 export interface NodeEditorHandle {
   getContent: () => string;
@@ -22,20 +22,14 @@ export interface EditorStateInitialProps {
   fontSize?: FontSize;
 }
 
-export interface BookMetadata {
-  title: string;
-  targetAudience: string;
-}
+import { BookMetadata } from '../../../../types/project';
 
-// Legacy interfaces for backward compatibility
 export interface LegacyNodeEditorProps {
   projectId: string;
   nodeId?: string;
   initialContent: string;
-  selectedNode: EditorNode | null;
-  bookTitle?: string;
-  targetAudience?: string;
-  onGenerateContent?: (nodeId: string, bookTitle: string, targetAudience: string) => Promise<boolean>;
+  selectedNode: Node | null;
+  onGenerateContent?: (nodeId: string, metadata: BookMetadata) => Promise<boolean>;
   bookMetadata?: BookMetadata;
   isEditing?: boolean;
 }

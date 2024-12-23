@@ -4,14 +4,27 @@ export interface Node {
   id: string;
   title: string;
   content?: string;
-  description: string;
-  purpose: string;
+  description?: string;
+  purpose?: string;
   type: NodeType;
-  status?: NodeStatus;
+  status: NodeStatus;
   order: number;
-  parentId: string | null;
   n_pages: number;
   should_split: boolean;
+  
+  // Relationships
+  projectId: string;
+  parentId: string | null;
+  children?: Node[];
+  
+  // Metadata
+  metadata: Record<string, unknown>;
+  
+  // Audit information
+  createdBy?: string;
+  lastEditedBy?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Project {
@@ -40,10 +53,14 @@ export interface NodeCreateInput {
   title: string;
   description?: string;
   purpose?: string;
-  order: number;
+  content?: string;
   status?: NodeStatus;
+  order: number;
   n_pages?: number;
   should_split?: boolean;
+  metadata?: Record<string, unknown>;
+  createdBy?: string;
+  lastEditedBy?: string;
 }
 
 export interface GenerateStructureOptions {

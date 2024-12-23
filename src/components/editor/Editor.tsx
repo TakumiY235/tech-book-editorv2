@@ -5,7 +5,8 @@ import { useEditor, EditorContent, Editor } from '@tiptap/react';
 import { EditorToolbar } from './ui/toolbar/editor-toolbar';
 import { createEditorConfig } from './core/config/editor-config';
 import { EditorState, NodeEditorHandle, FontSize, LegacyNodeEditorProps } from './core/types/editor-types';
-import { EditorNode, NodeType, NodeStatus } from './core/types/node-types';
+import { NodeType, NodeStatus } from '@prisma/client';
+import { Node } from '../../types/project';
 import { useEditorState } from './hooks/useEditorState';
 import { useContentGeneration } from './hooks/useContentGeneration';
 import { useAutoSave } from './hooks/useAutoSave';
@@ -16,7 +17,7 @@ import { EditorModeToggle } from './ui/mode/editor-mode-toggle';
 
 interface EditorProps {
   initialContent: string;
-  node: EditorNode;
+  node: Node;
   onSave?: (content: string) => void;
   onMetadataChange?: (type: NodeType, status: NodeStatus) => void;
   onGenerateContent?: () => Promise<{ success: boolean }>;
@@ -193,16 +194,15 @@ export const NodeEditor = forwardRef<NodeEditorHandle, LegacyNodeEditorProps>((p
     selectedNode,
     onGenerateContent,
     nodeId,
-    bookTitle,
-    targetAudience,
+    bookMetadata,
     ...restProps
   } = props;
 
   if (!selectedNode) return null;
 
   const handleGenerateContent = async () => {
-    if (onGenerateContent && nodeId && bookTitle && targetAudience) {
-      const success = await onGenerateContent(nodeId, bookTitle, targetAudience);
+    if (onGenerateContent && nodeId && bookMetadata) {
+      const success = await onGenerateContent(nodeId, bookMetadata);
       return { success };
     }
     return { success: false };

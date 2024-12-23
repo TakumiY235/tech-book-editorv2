@@ -2,13 +2,13 @@
 
 import React from 'react';
 import { NodeEditor } from '../editor/Editor';
-import { Project } from '../../types/project';
-import { EditorNode } from '../editor/core/types/node-types';
+import { Project, BookMetadata } from '../../types/project';
+import { Node } from '../editor/core/types/node-types';
 
 interface ProjectMainContentProps {
   project: Project;
-  selectedNode: EditorNode | null | undefined;
-  onGenerateContent?: (nodeId: string, bookTitle: string, targetAudience: string) => Promise<boolean>;
+  selectedNode: Node | null | undefined;
+  onGenerateContent?: (nodeId: string, metadata: BookMetadata) => Promise<boolean>;
 }
 
 export function ProjectMainContent({
@@ -16,6 +16,13 @@ export function ProjectMainContent({
   selectedNode,
   onGenerateContent
 }: ProjectMainContentProps) {
+  const handleGenerateContent = async (nodeId: string, metadata: BookMetadata) => {
+    if (onGenerateContent) {
+      return onGenerateContent(nodeId, metadata);
+    }
+    return false;
+  };
+
   return (
     <main className="w-2/3 p-4 overflow-y-auto h-full">
       <NodeEditor
@@ -23,12 +30,12 @@ export function ProjectMainContent({
         nodeId={selectedNode?.id}
         initialContent={selectedNode?.content || ''}
         selectedNode={selectedNode || null}
-        bookTitle={project.name}
-        targetAudience={project.metadata?.targetAudience || ''}
-        onGenerateContent={onGenerateContent}
+        onGenerateContent={handleGenerateContent}
         bookMetadata={{
           title: project.name,
-          targetAudience: project.metadata?.targetAudience || ''
+          targetAudience: project.metadata?.targetAudience || '',
+          overview: project.metadata?.overview || '',
+          pageCount: project.metadata?.pageCount || 0
         }}
       />
     </main>

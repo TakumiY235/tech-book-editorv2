@@ -68,8 +68,8 @@ nodes:
 7. これ以上の分節は行わないのでshould_splitはfalseを返してください
 8. 親の内容を意味的に適切な大きさの節に分割してください
 9. IDの生成規則（重要）：
-   - 各節のIDは必ず「${node.id}_subN」の形式にしてください（Nは連番）
-   - 例：「${node.id}_sub1」「${node.id}_sub2」「${node.id}_sub3」
+   - 各節のIDは必ず「親ノードのID_subN」の形式にしてください（Nは連番）
+   - 例：親ノードのIDが「ch1」の場合、「ch1_sub1」「ch1_sub2」「ch1_sub3」
 
 10. parentIdの設定規則（重要）：
     - 全ての節のparentIdは「${node.id}」を指定してください
@@ -82,8 +82,8 @@ nodes:
 各フィールドの記入要件：
 id:
 
-必ず「${node.id}_subN」形式（Nは連番）
-例：「${node.id}_sub1」「${node.id}_sub2」
+必ず「親ノードのID_subN」形式（Nは連番）
+例：親ノードのIDが「ch1」の場合、「ch1_sub1」「ch1_sub2」
 欠番がないように連番を付与
 
 

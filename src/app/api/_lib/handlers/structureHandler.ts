@@ -1,10 +1,9 @@
 import { NextRequest } from 'next/server';
-import { NodeStatus, Prisma } from '@prisma/client';
+import { Node as PrismaNode, NodeStatus, NodeType, Prisma } from '@prisma/client';
 import { ApiError } from '../errors/ApiError';
 import { formatSuccessResponse } from '../responses/formatResponse';
 import { validateNodeContext, validateProjectMetadata } from '../validation/serviceValidation';
-import { getRepositories } from '../../../../services/prisma/repositories';
-import { prisma } from '../../../../services/prisma/db';
+import { db } from '../../../../services/prisma/clients';
 import { NodeCreateInput, GenerateStructureOptions, BookMetadata, OrganizedNode } from '../../../../types/project';
 
 /**
@@ -16,7 +15,6 @@ export const handleGenerateStructure = async (
 ) => {
   try {
     const { projectId, nodeId, requestBody } = options;
-    const { nodeRepository } = getRepositories();
 
     // プロジェクトの検証とAIサービスの初期化
     const { project, node, editorService } = await validateNodeContext(projectId, nodeId);
@@ -34,15 +32,10 @@ export const handleGenerateStructure = async (
         pageCount: metadata.pageCount,
       };
 
-      // 既存の子ノードを削除
-      const existingNodes = await nodeRepository.findMany({
-        where: {
-          projectId,
-          parentId: nodeId
-        }
-      });
+      // 既存の子ノードを取得して削除
+      const existingNodes = await db.node.findChildren(nodeId);
       for (const existingNode of existingNodes) {
-        await nodeRepository.delete(existingNode.id);
+        await db.node.deleteWithChildren(existingNode.id);
       }
     } else {
       // プロジェクトレベルの構造生成
@@ -57,10 +50,11 @@ export const handleGenerateStructure = async (
 
       bookMetadata = { title, overview, targetAudience, pageCount };
 
-      // プロジェクト全体のノードを削除
-      await prisma.node.deleteMany({
-        where: { projectId }
-      });
+      // プロジェクトの全ノードを取得して削除
+      const projectNodes = await db.node.findByProjectId(projectId);
+      for (const node of projectNodes) {
+        await db.node.deleteWithChildren(node.id);
+      }
     }
 
     // 構造生成
@@ -69,7 +63,6 @@ export const handleGenerateStructure = async (
     // ノードの作成
     const createdNodes = await createNodesFromStructure(
       projectId,
-      nodeRepository,
       chapterStructure,
       nodeId
     );
@@ -89,13 +82,12 @@ export const handleGenerateStructure = async (
  */
 async function createNodesFromStructure(
   projectId: string,
-  nodeRepository: any,
   structures: OrganizedNode[],
   parentId?: string,
   nodeMap = new Map()
-): Promise<Node[]> {
+): Promise<PrismaNode[]> {
   try {
-    const nodes = [];
+    const nodes: PrismaNode[] = [];
     let order = 0;
 
     for (const structure of structures) {
@@ -104,21 +96,17 @@ async function createNodesFromStructure(
         continue;
       }
 
-      const nodeData: NodeCreateInput = {
-        id: structure.id,
-        title: structure.title,
+      const nodeData = {
+        projectId,
+        parentId,
         type: structure.type,
-        projectId: projectId,
-        parentId: parentId,
-        order: order++,
-        status: NodeStatus.draft,
+        title: structure.title,
         description: structure.description || '',
         purpose: structure.purpose || '',
-        n_pages: typeof structure.n_pages === 'number' ? structure.n_pages : 0,
-        should_split: Boolean(structure.should_split)
+        order: order++
       };
 
-      const createdNode = await nodeRepository.createNode(nodeData);
+      const createdNode = await db.node.create(nodeData);
       nodes.push(createdNode);
       nodeMap.set(structure.id, createdNode);
 
@@ -126,7 +114,6 @@ async function createNodesFromStructure(
       if (structure.children?.length > 0) {
         const childNodes = await createNodesFromStructure(
           projectId,
-          nodeRepository,
           structure.children,
           createdNode.id,
           nodeMap

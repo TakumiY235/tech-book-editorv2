@@ -2,7 +2,8 @@ import { NextRequest } from 'next/server';
 import { withErrorHandling, withValidation } from '../../../../middleware';
 import { formatSuccessResponse } from '../../../../_lib/responses/formatResponse';
 import { ApiError } from '../../../../_lib/errors/ApiError';
-import { getRepositories } from '../../../../../../services/prisma/repositories';
+import { db } from '../../../../../../services/prisma/clients';
+import { Node } from '@prisma/client';
 
 interface ReorderNodesRequest {
   nodes: Array<{
@@ -44,21 +45,19 @@ const handleReorderNodes = async (
   validatedData: ReorderNodesRequest,
   { params }: { params: { id: string } }
 ) => {
-  const { projectRepository, nodeRepository } = getRepositories();
-
   // プロジェクトの存在確認
-  const project = await projectRepository.findById(params.id);
+  const project = await db.project.findById(params.id);
   if (!project) {
     throw ApiError.notFound('Project not found');
   }
 
   // 各ノードの存在確認とプロジェクトへの所属確認
   const nodes = await Promise.all(
-    validatedData.nodes.map(node => nodeRepository.findById(node.id))
+    validatedData.nodes.map(node => db.node.findById(node.id))
   );
 
   const invalidNodes = nodes.filter(
-    (node, index) =>
+    (node: Node | null, index: number) =>
       !node || node.projectId !== params.id
   );
 
@@ -67,7 +66,7 @@ const handleReorderNodes = async (
   }
 
   // ノードの並び替えを実行
-  await nodeRepository.reorderNodes(validatedData.nodes);
+  await db.node.reorderNodes(validatedData.nodes);
 
   return formatSuccessResponse({ message: 'Nodes reordered successfully' });
 };

@@ -1,18 +1,18 @@
 import { ApiError } from '../errors/ApiError';
-import { getRepositories } from '../../../../services/prisma/repositories';
 import { AIEditorService } from '../../../../services/ai/AIGeneration';
-import { Node } from '@prisma/client';
+import { Node, Project } from '@prisma/client';
+import { db } from '../../../../services/prisma/clients';
 
 // NodeWithParent型の定義を追加
 export interface NodeWithParent extends Node {
-  parent?: Node | null;
+  parent: Node | null;
 }
 
 export interface ValidatedNodeContext {
   projectId: string;
   nodeId?: string;
-  project: any;
-  node?: NodeWithParent;  // 型を NodeWithParent に変更
+  project: Project;
+  node?: NodeWithParent;
   editorService: AIEditorService;
 }
 
@@ -30,7 +30,7 @@ export const validateAIServiceConfig = () => {
 /**
  * プロジェクトIDとノードIDのパラメータを検証する
  */
-export const validateParams = async (params: any): Promise<{ projectId: string; nodeId?: string }> => {
+export const validateParams = async (params: { id: string; nodeId?: string }): Promise<{ projectId: string; nodeId?: string }> => {
   const projectId = params.id;
   const nodeId = params.nodeId;
 
@@ -45,11 +45,10 @@ export const validateParams = async (params: any): Promise<{ projectId: string; 
  * プロジェクトとノードの存在を検証し、必要なコンテキストを返す
  */
 export const validateNodeContext = async (projectId: string, nodeId?: string): Promise<ValidatedNodeContext> => {
-  const { projectRepository, nodeRepository } = getRepositories();
   const editorService = validateAIServiceConfig();
 
   // プロジェクトの存在確認
-  const project = await projectRepository.findById(projectId);
+  const project = await db.project.findById(projectId);
   if (!project) {
     throw ApiError.notFound('Project not found');
   }
@@ -57,14 +56,14 @@ export const validateNodeContext = async (projectId: string, nodeId?: string): P
   // ノードIDが指定されている場合、ノードの存在とプロジェクトへの所属を確認
   let node: NodeWithParent | undefined;
   if (nodeId) {
-    const foundNode = await nodeRepository.findByIdWithParent(nodeId);
+    const foundNode = await db.node.findByIdWithParent(nodeId);
     if (!foundNode) {
       throw ApiError.notFound('Node not found');
     }
     if (foundNode.projectId !== projectId) {
       throw ApiError.badRequest('Node does not belong to this project');
     }
-    node = foundNode;
+    node = foundNode as NodeWithParent;
   }
 
   return {
@@ -79,16 +78,21 @@ export const validateNodeContext = async (projectId: string, nodeId?: string): P
 /**
  * プロジェクトのメタデータを検証し、デフォルト値を設定する
  */
-export const validateProjectMetadata = (project: any) => {
+export const validateProjectMetadata = (project: Project) => {
   const metadata = project.metadata && typeof project.metadata === 'object'
-    ? project.metadata
+    ? project.metadata as Record<string, unknown>
     : {};
 
   return {
-    targetAudience: typeof metadata === 'object' && 'targetAudience' in metadata && typeof metadata.targetAudience === 'string'
+    title: project.name || 'Untitled Project',
+    targetAudience: typeof metadata.targetAudience === 'string'
       ? metadata.targetAudience
       : 'general',
-    overview: metadata?.overview || '',
-    pageCount: metadata?.pageCount || 200
+    overview: typeof metadata.overview === 'string'
+      ? metadata.overview
+      : '',
+    pageCount: typeof metadata.pageCount === 'number'
+      ? metadata.pageCount
+      : 200
   };
 };

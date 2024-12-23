@@ -1,9 +1,10 @@
 import { NextRequest } from 'next/server';
+import { Node as PrismaNode, Prisma } from '@prisma/client';
 import { ApiError } from '../errors/ApiError';
 import { formatSuccessResponse } from '../responses/formatResponse';
-import { getRepositories } from '../../../../services/prisma/repositories';
 import { validateProjectExists } from '../validation/entityValidation';
 import { CreateProjectRequest, UpdateProjectRequest } from '../types/projects';
+import { db } from '../../../../services/prisma/clients';
 
 // プロジェクト作成ハンドラー
 export const handleCreateProject = async (
@@ -11,12 +12,10 @@ export const handleCreateProject = async (
   validatedData: CreateProjectRequest
 ) => {
   try {
-    const { userRepository, projectRepository } = getRepositories();
-
     // 開発用の固定ユーザーを取得または作成
-    const user = await userRepository.findOrCreateDevUser();
+    const user = await db.user.findOrCreateDevUser();
 
-    const project = await projectRepository.createWithUser({
+    const project = await db.project.create({
       name: validatedData.name,
       userId: user.id,
     });
@@ -34,16 +33,7 @@ export const handleCreateProject = async (
 // プロジェクト一覧取得ハンドラー
 export const handleGetProjects = async (request: NextRequest) => {
   try {
-    const { projectRepository } = getRepositories();
-
-    const projects = await projectRepository.findMany({
-      include: {
-        user: true,
-      },
-      orderBy: {
-        name: 'asc',
-      },
-    });
+    const projects = await db.project.findByUserId('dev-user');
 
     if (!projects.length) {
       throw ApiError.notFound('No projects found');
@@ -65,12 +55,11 @@ export const handleGetProject = async (
   context: { params: { id: string } }
 ) => {
   try {
-    const { projectRepository } = getRepositories();
     const params = await context.params;
     const id = params.id;
     
     await validateProjectExists(id);
-    const project = await projectRepository.findByIdWithDetails(id);
+    const project = await db.project.findByIdWithDetails(id);
     
     if (!project) {
       throw ApiError.notFound('Project not found');
@@ -93,16 +82,29 @@ export const handleUpdateProject = async (
   context: { params: { id: string } }
 ) => {
   try {
-    const { projectRepository } = getRepositories();
     const params = await context.params;
     const id = params.id;
     
     await validateProjectExists(id);
 
-    const updatedProject = await projectRepository.update(id, {
-      ...(validatedData.name && { name: validatedData.name }),
-      ...(validatedData.metadata && { metadata: validatedData.metadata }),
-    });
+    let updateData = {};
+    if (validatedData.name) {
+      updateData = { ...updateData, name: validatedData.name };
+    }
+    if (validatedData.metadata) {
+      const metadata: Prisma.JsonObject = {
+        title: validatedData.metadata.title,
+        overview: validatedData.metadata.overview,
+        targetAudience: validatedData.metadata.targetAudience,
+        pageCount: validatedData.metadata.pageCount
+      };
+      await db.project.updateMetadata(id, metadata);
+    }
+
+    const updatedProject = await db.project.findByIdWithDetails(id);
+    if (!updatedProject) {
+      throw ApiError.notFound('Project not found after update');
+    }
 
     return formatSuccessResponse(updatedProject);
   } catch (error) {
@@ -120,23 +122,22 @@ export const handleDeleteProject = async (
   context: { params: { id: string } }
 ) => {
   try {
-    const { projectRepository, nodeRepository } = getRepositories();
     const params = await context.params;
     const id = params.id;
     
     await validateProjectExists(id);
 
     // プロジェクトに属するすべてのノードを取得
-    const nodes = await nodeRepository.findByProjectId(id);
+    const nodes = await db.node.findByProjectId(id);
 
     // ルートノードから再帰的に削除
-    const rootNodes = nodes.filter(node => !node.parentId);
-    for (const node of rootNodes) {
-      await nodeRepository.deleteWithChildren(node.id);
-    }
+    const rootNodes = nodes.filter((node: PrismaNode) => !node.parentId);
+    await Promise.all(
+      rootNodes.map((node: PrismaNode) => db.node.deleteWithChildren(node.id))
+    );
 
     // プロジェクトを削除
-    await projectRepository.delete(id);
+    await db.project.delete(id);
 
     return formatSuccessResponse({ message: 'Project deleted successfully' }, 204);
   } catch (error) {

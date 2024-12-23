@@ -18,6 +18,13 @@ export class NodeValidator {
         );
       }
 
+      if (!subsection.n_pages || subsection.n_pages <= 0) {
+        throw AIServiceError.validation(
+          `Node at index ${subsection.id} has invalid n_pages: ${subsection.n_pages}`,
+          { nodeId: subsection.id, n_pages: subsection.n_pages }
+        );
+      }
+
       this.validateSubsectionId(subsection.id, parentId);
     });
   }

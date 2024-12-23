@@ -22,7 +22,7 @@ ${node.id} - 章のID
 ${node.title} - タイトル
 ${node.description} - 章の説明
 ${node.purpose} - 章の目的
-${node.n_pages} - 章のページ数
+${node.n_pages || 10} - 章のページ数（未設定の場合は10ページとして扱います）
 
 親階層のコンテキスト:
 ${parentContext}
@@ -40,7 +40,7 @@ id: ${node.id}
 タイトル: ${node.title}
 説明: ${node.description || '説明なし'}
 目的: ${node.purpose || '目的なし'}
-ページ数: ${node.n_pages || '未設定'}
+ページ数: ${node.n_pages || 10}（未設定の場合は10ページとして扱います）
 
 注意：
 - 親階層や同階層のノードが存在しない場合でも、章の内容に基づいて適切な分節化を行ってください
